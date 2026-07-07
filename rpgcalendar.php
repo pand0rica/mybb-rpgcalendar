@@ -11,7 +11,7 @@ define('IN_MYBB', 1);
 define('THIS_SCRIPT', 'rpgcalendar.php');
 
 $templatelist = 'rpgcalendar,rpgcalendar_nav,rpgcalendar_nav_link,rpgcalendar_weekdayheader_cell,'
-    . 'rpgcalendar_weekrow,rpgcalendar_daycell,rpgcalendar_daycell_empty,rpgcalendar_eventbit,'
+    . 'rpgcalendar_weekrow,rpgcalendar_daycell,rpgcalendar_daycell_empty,rpgcalendar_daycell_more,rpgcalendar_eventbit,'
     . 'rpgcalendar_eventbit_plain,rpgcalendar_birthdaybit,rpgcalendar_monthtext,'
     . 'rpgcalendar_eventtable,rpgcalendar_eventtable_row,rpgcalendar_eventtable_empty';
 
@@ -161,8 +161,13 @@ foreach ($month_data['grid'] as $week) {
             eval('$day_birthdays .= "' . $templates->get('rpgcalendar_birthdaybit') . '";');
         }
 
+        // Cap chips per cell so crowded days do not blow up the grid
         $day_events = '';
+        $shown = 0;
         foreach ($cell['events'] as $event) {
+            if ($shown >= 4) {
+                break;
+            }
             $event_badge = htmlspecialchars_uni($event['badge']);
             $event_title = htmlspecialchars_uni($event['title']);
             if ($event['url'] !== '') {
@@ -171,6 +176,11 @@ foreach ($month_data['grid'] as $week) {
             } else {
                 eval('$day_events .= "' . $templates->get('rpgcalendar_eventbit_plain') . '";');
             }
+            $shown++;
+        }
+        if (count($cell['events']) > $shown) {
+            $more_label = $lang->sprintf($lang->rpgcalendar_more, count($cell['events']) - $shown);
+            eval('$day_events .= "' . $templates->get('rpgcalendar_daycell_more') . '";');
         }
 
         eval('$day_cells .= "' . $templates->get('rpgcalendar_daycell') . '";');

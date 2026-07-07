@@ -93,7 +93,8 @@ There is also an optional output hook `rpgcalendar_monthview_end`
 
 ## Testing
 
-No local MyBB. Deploy to test forum via scp/rsync (`<user>@…`, path
-`<forum-root>/`), lint with `php -l` over SSH, run `tests/cli-selftest.php`
-on the server (bootstraps `inc/init.php`), verify pages with curl. `tests/` is not part
-of a release zip.
+No local MyBB. Deploy to the test forum via scp/rsync over SSH (connection data in the
+private global notes, NOT in this repo), lint with `php -l` over SSH, run
+`tests/cli-selftest.php` on the server from the MyBB root (bootstraps `inc/init.php`),
+verify pages with curl. `tests/cli-plugin.php` installs/uninstalls the plugin from the
+CLI for lifecycle tests. `tests/` is not part of a release zip.

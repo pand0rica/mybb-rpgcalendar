@@ -13,6 +13,7 @@ $l['rpgcalendar_col_type']  = "Type";
 $l['rpgcalendar_col_event'] = "Event";
 
 $l['rpgcalendar_birthday'] = "Birthday";
+$l['rpgcalendar_more']     = "+{1} more";
 
 $l['rpgcalendar_source_extended'] = "Event";
 $l['rpgcalendar_source_native']   = "Forum event";

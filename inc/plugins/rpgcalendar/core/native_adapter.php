@@ -197,6 +197,10 @@ class Rpgcalendar_NativeAdapter
             if ($parsed === null) {
                 continue;
             }
+            // no birthdays before the (IC) birth year
+            if ($parsed['year'] !== null && $year < $parsed['year']) {
+                continue;
+            }
             $age = null;
             if ($parsed['year'] !== null && $year - $parsed['year'] > 0) {
                 $age = $year - $parsed['year'];
