@@ -1,0 +1,151 @@
+/* rpgcalendar - minimalist month view (attached to rpgcalendar.php) */
+
+.rpgcalendar_nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.rpgcalendar_nav_links {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.rpgcalendar_nav_current {
+    font-size: 1.15em;
+}
+
+.rpgcalendar_nav_jump {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.rpgcalendar_yearinput {
+    width: 90px;
+}
+
+.rpgcalendar_monthtextbox {
+    margin-bottom: 10px;
+}
+
+.rpgcalendar_monthtext_body {
+    line-height: 1.5;
+}
+
+.rpgcalendar_table {
+    table-layout: fixed;
+    width: 100%;
+}
+
+.rpgcalendar_wd {
+    width: 14.28%;
+}
+
+.rpgcalendar_day {
+    height: 95px;
+    padding: 4px;
+    vertical-align: top;
+    overflow: hidden;
+}
+
+.rpgcalendar_day--empty {
+    opacity: 0.45;
+}
+
+.rpgcalendar_daynum {
+    font-weight: bold;
+    font-size: 0.85em;
+    opacity: 0.65;
+    margin-bottom: 3px;
+}
+
+/* Event chips */
+.rpgcalendar_event {
+    display: block;
+    margin: 0 0 2px 0;
+    padding: 1px 5px;
+    font-size: 0.82em;
+    line-height: 1.5;
+    border-left: 3px solid #64748b;
+    border-radius: 3px;
+    background: rgba(100, 116, 139, 0.12);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.rpgcalendar_event a {
+    text-decoration: none;
+}
+
+.rpgcalendar_event--extended {
+    border-left-color: #3b82f6;
+    background: rgba(59, 130, 246, 0.12);
+}
+
+.rpgcalendar_event--native {
+    border-left-color: #64748b;
+    background: rgba(100, 116, 139, 0.12);
+}
+
+.rpgcalendar_event--plot {
+    border-left-color: #a855f7;
+    background: rgba(168, 85, 247, 0.12);
+}
+
+.rpgcalendar_event--ics {
+    border-left-color: #10b981;
+    background: rgba(16, 185, 129, 0.12);
+}
+
+.rpgcalendar_event--birthday {
+    border-left-color: #f59e0b;
+    background: rgba(245, 158, 11, 0.12);
+}
+
+/* Important-events table */
+.rpgcalendar_eventtable {
+    margin-top: 10px;
+}
+
+.rpgcalendar_col_date,
+.rpgcalendar_cell_date {
+    width: 18%;
+    white-space: nowrap;
+}
+
+.rpgcalendar_col_type,
+.rpgcalendar_cell_type {
+    width: 12%;
+}
+
+.rpgcalendar_badge {
+    display: inline-block;
+    padding: 1px 7px;
+    font-size: 0.8em;
+    border-radius: 3px;
+    white-space: nowrap;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+    .rpgcalendar_day {
+        height: 60px;
+        padding: 2px;
+    }
+
+    .rpgcalendar_event {
+        font-size: 0.72em;
+        padding: 0 3px;
+    }
+
+    .rpgcalendar_nav {
+        flex-direction: column;
+        align-items: stretch;
+    }
+}
