@@ -3,6 +3,32 @@
 All notable changes to this project will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [1.1.0] - 2026-08-13
+
+### New
+- Day view (`action=day`): click a day cell to open a full list of that day's events;
+  from here members can add events directly on the frontend
+- Frontend event creation, editing and deletion for logged-in members, with the same
+  power as the ACP form (multi-day spans, weekly/monthly/yearly repeats with an interval,
+  important flag)
+- Team groups (`rpgcalendar_team_groups` setting) may create **forum-wide** events visible
+  to everyone; all other members create **personal** events for themselves
+- Event invitations: invite individual members to an event via username autocomplete; they
+  are notified by PM and can accept or decline, and see the event on their own calendar
+- Personal and shared **sub-calendars**: a "My calendars" page where each member creates
+  their own calendars and picks a per-user colour and show/hide state for every calendar
+  they can see (including the built-in Birthdays calendar)
+- Calendar sharing: share a calendar with other members as **Viewer** (read-only) or
+  **Editor** (may add/edit events); invitees accept or decline via PM, and can leave later
+- Joinable calendars: global calendars an admin marks as joinable let members self-subscribe
+- ACP "Calendars" tab: manage global sub-calendars (name, default colour, joinable flag)
+- Global template variable `{$rpgcalendar_current_monthtexts}` (`rpgcalendar_current_inplay`
+  setting) to surface the current in-play month texts in templates and forum descriptions
+- `rpgcalendar_html_titles` setting to optionally allow HTML in event titles on trusted calendars
+- Provider contract extended with virtual sub-calendars: new `rpgcalendar_collect_calendars`
+  hook and optional `calendar_key` / `default_color` fields on collected events, so plot
+  plugins can expose their own colourable, hideable calendars
+
 ## [1.0.0] - 2026-07-07
 
 ### New

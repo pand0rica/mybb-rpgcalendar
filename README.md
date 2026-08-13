@@ -15,6 +15,11 @@ built for RPG forums. It merges four event sources into one grid:
 Plus a free text per month + year (weather, moon phases, …) above the grid and a table of
 all important events below it.
 
+Members are not just viewers: from the day view they create their own events, invite other
+members (who accept or decline by PM), and organise everything into personal or shared
+**sub-calendars** with a colour they pick themselves and a show/hide toggle. Team groups can
+publish forum-wide events for everyone.
+
 ![Month view](docs/screenshots/monthview.png)
 
 ## Requirements
@@ -79,6 +84,24 @@ One free text per month + year, shown in a box above the grid – ideal for weat
 phases or a short summary of what is going on in your world that month. MyCode is allowed,
 HTML is not. Saving a text for a month that already has one overwrites it.
 
+### Global calendars (Admin)
+
+Path: **ACP → Tools & Maintenance → RPG Calendar → Calendars**
+
+Here you manage the **global sub-calendars** that appear for every member:
+
+- *Name* and *Default colour* – the fallback colour a calendar has until a member picks
+  their own colour for it on the frontend.
+- *Joinable*:
+  - **No** – a public calendar visible to everyone; team members write to it.
+  - **Yes** – members can self-subscribe (join) to it and add their own events; only
+    subscribers see it. Good for opt-in categories (e.g. "Quidditch", "Events").
+- Deleting a global calendar moves its events to the built-in *Forum* calendar; nothing is
+  lost.
+
+Members create their own **personal** calendars on the frontend (see below) – those never
+appear here.
+
 ### Birthdays
 
 Two sources, selected by the *Birthday source* setting:
@@ -91,11 +114,65 @@ Two sources, selected by the *Birthday source* setting:
   *every* displayed year from the birth year onwards, with the age computed against the
   displayed year – perfect for character birthdays in an RPG timeline.
 
-### For members
+### Day view and creating events (members)
 
-Members just open the calendar (header link or `rpgcalendar.php`) and navigate months with
-the ‹ › links or the month/year jump form. Private native events stay private. Members keep
-adding their own events through the native calendar as before.
+Any logged-in member can create events directly on the frontend:
+
+1. On the month view, click a day number to open its **day view** (`rpgcalendar.php?action=day&…`),
+   which lists every event on that day.
+2. Click **Add event**. The form offers:
+   - *Title* and *Description*
+   - *Start date*, *Multi-day* + *End date*
+   - *Repeat* (weekly/monthly/yearly) with a *Repeat interval* (e.g. every 2 weeks) and an
+     optional *Repeat until* date
+   - *Important* – also list it in the month's important-events table
+   - *Calendar* – which of your sub-calendars the event belongs to (see below)
+   - *Forum-wide* – **team groups only**: make the event visible to everyone. Members who are
+     not in a team group can only create personal events for themselves.
+   - *Invite members* – start typing a username and pick from the suggestions
+3. **Edit** and **Delete** appear on events you own (or may edit through a shared calendar).
+
+Which groups count as "team" is controlled by the *Team groups* setting.
+
+### Invitations
+
+When you add usernames under *Invite members*, each invited member:
+
+- receives a **PM** with a link to the event,
+- sees the event on their own calendar,
+- and can **Accept** or **Decline** on the event page.
+
+The event page shows every invitee's status (pending / accepted / declined).
+
+### My calendars and colours
+
+Path: the **My calendars** link on the calendar page (`rpgcalendar.php?action=calendars`)
+
+Every member has a personal calendars page where they can:
+
+- **Create personal calendars** (e.g. "My character", "Guild") that only they and invited
+  members see.
+- Pick a **colour** and a **show/hide** state *per calendar* – this is stored per user, so
+  your colours never affect anyone else. This includes global calendars and the built-in
+  **Birthdays** calendar.
+- **Join** any global calendar an admin marked as *joinable*.
+
+### Sharing a calendar
+
+From **My calendars → Share**, you can share one of your calendars with other members:
+
+- **Viewer** – may only see the calendar and its events.
+- **Editor** – may also add and edit events in it.
+
+The member receives a **PM** to accept or decline the invitation; pending and accepted
+members are listed on the share page. Either side can remove the share later, and a member
+can **Leave** a calendar that was shared with them.
+
+### Navigating (members)
+
+Members open the calendar (header link or `rpgcalendar.php`) and navigate months with the
+‹ › links or the month/year jump form. Private native events stay private, and members can
+still add events through the native MyBB calendar as before.
 
 ## Configuration
 
@@ -114,6 +191,9 @@ Path: **ACP → Configuration → Settings → RPG Calendar**
 | Birthday year range | For the native source only: max. distance from the real current year |
 | Minimum / Maximum year | Navigation and input limits |
 | Default year / month | Start view when opened without parameters; 0 = real today |
+| Team groups | User groups whose members may create forum-wide events from the day view. Everyone else can only create personal events and invite individual members. Empty = only admins publish forum-wide events |
+| Current in-play months | Comma-separated `year-month` tokens (e.g. `1487-3, 1487-4`) whose month texts are collected into the global template variable `{$rpgcalendar_current_monthtexts}` (usable in templates and forum/category descriptions). Empty disables the variable (no query overhead) |
+| Allow HTML in event titles | Render HTML in event titles instead of escaping it. Only enable on calendars where you trust everyone who can create events – on public calendars this lets those users inject markup |
 
 ## Integration for plot plugins (Plot-CP)
 
@@ -134,8 +214,10 @@ function plotcp_rpgcalendar_collect(array &$args)
         'url'       => 'plotcp.php?action=view&pid=' . $plot_id,  // optional
         'start'     => ['y' => 1247, 'm' => 3, 'd' => 12],
         'end'       => ['y' => 1247, 'm' => 4, 'd' => 2],  // optional, >= start
-        'important' => true,                    // optional, default true
-        'badge'     => 'plot',                  // optional CSS badge suffix
+        'important'     => true,                // optional, default true
+        'badge'         => 'plot',              // optional CSS badge suffix
+        'calendar_key'  => 'plotcat-5',         // optional: assign to a virtual sub-calendar
+        'default_color' => '#a855f7',           // optional: #rrggbb, user preference overrides it
     ];
 }
 ```
@@ -147,6 +229,28 @@ Contract guarantees:
 - Escaping is done by rpgcalendar at render time – deliver raw titles.
 - Malformed entries are silently discarded; a broken provider never breaks the page.
 - Only `http(s)` or relative URLs are accepted.
+
+### Virtual sub-calendars (optional)
+
+A provider may also expose its own **sub-calendars** – for example one per plot category –
+so they show up on every member's *My calendars* page with a per-user colour and show/hide
+toggle. Register the additional hook:
+
+```php
+$plugins->add_hook('rpgcalendar_collect_calendars', 'plotcp_rpgcalendar_calendars');
+
+function plotcp_rpgcalendar_calendars(array &$args)
+{
+    $args['calendars'][] = [
+        'key'           => 'plotcat-5',   // must NOT start with the reserved 'cal-'
+        'name'          => 'Plots',
+        'default_color' => '#a855f7',
+    ];
+}
+```
+
+Events reference the same calendar via `calendar_key`. rpgcalendar's own birthdays are the
+built-in virtual calendar `birthdays`.
 
 There is also an output hook `rpgcalendar_monthview_end`
 (`['year' => int, 'month' => int, 'output' => &$html]`) to append content below the
@@ -164,9 +268,11 @@ important-events table.
 
 1. **ACP → Configuration → Plugins → RPG Calendar → Deactivate** (removes templates,
    settings and the stylesheet).
-2. Click **Uninstall** (drops the three plugin tables `rpgcalendar_events`,
-   `rpgcalendar_monthtexts`, `rpgcalendar_feeds` – your extended events and month texts are
-   deleted; native calendar data is never touched).
+2. Click **Uninstall** (drops all plugin tables: `rpgcalendar_events`,
+   `rpgcalendar_monthtexts`, `rpgcalendar_event_invites`, `rpgcalendar_calendars`,
+   `rpgcalendar_calendar_members`, `rpgcalendar_calendar_prefs`, `rpgcalendar_feeds` – your
+   extended events, calendars, invitations and month texts are deleted; native calendar data
+   is never touched).
 3. Delete the uploaded files (`rpgcalendar.php`, `inc/plugins/rpgcalendar.php`,
    `inc/plugins/rpgcalendar/`, `admin/modules/tools/rpgcalendar.php`, the language files).
 
@@ -177,12 +283,6 @@ important-events table.
 ![ACP: event list](docs/screenshots/acp-events.png)
 ![ACP: add event](docs/screenshots/acp-add-event.png)
 ![ACP: month texts](docs/screenshots/acp-monthtexts.png)
-
-## Planned for v1.1
-
-- Read-only Google Calendar import via secret ICS URLs: team feeds in the ACP, private
-  feeds in the UserCP, fetched periodically by a MyBB task. The database schema is already
-  prepared (`rpgcalendar_feeds` table, `source`/`source_uid`/`feed_id`/`private` columns).
 
 ## Changelog
 
