@@ -149,3 +149,182 @@
         align-items: stretch;
     }
 }
+
+/* Single event detail view */
+.rpgcalendar_eventview_back {
+    margin-bottom: 10px;
+}
+
+.rpgcalendar_eventview_meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.rpgcalendar_eventview_date {
+    font-weight: bold;
+}
+
+.rpgcalendar_eventview_author {
+    opacity: 0.85;
+}
+
+.rpgcalendar_eventview_body {
+    line-height: 1.5;
+}
+
+/* Clickable day number in the month grid */
+.rpgcalendar_daylink {
+    text-decoration: none;
+    font-weight: bold;
+}
+
+/* Day view */
+.rpgcalendar_daytable {
+    width: 100%;
+}
+.rpgcalendar_daycol_type {
+    width: 22%;
+    white-space: nowrap;
+}
+.rpgcalendar_day_empty {
+    text-align: center;
+    opacity: 0.8;
+}
+.rpgcalendar_day_add {
+    margin-top: 12px;
+}
+
+/* Add / edit form */
+.rpgcalendar_formtable {
+    width: 100%;
+}
+.rpgcalendar_formfield {
+    width: 95%;
+}
+.rpgcalendar_dayinput {
+    width: 60px;
+}
+.rpgcalendar_form_submit {
+    margin-top: 12px;
+}
+
+/* Invite list + response */
+.rpgcalendar_eventview_invites {
+    margin-top: 12px;
+}
+.rpgcalendar_eventview_invites_title {
+    font-weight: bold;
+    margin-bottom: 4px;
+}
+.rpgcalendar_invitelist {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+.rpgcalendar_invite {
+    padding: 2px 0;
+}
+.rpgcalendar_invite_status {
+    font-size: 0.85em;
+    opacity: 0.8;
+}
+.rpgcalendar_invite--accepted .rpgcalendar_invite_status,
+.rpgcalendar_invite--accepted {
+    color: #2e7d32;
+}
+.rpgcalendar_invite--declined .rpgcalendar_invite_status,
+.rpgcalendar_invite--declined {
+    color: #c62828;
+}
+.rpgcalendar_eventview_response {
+    margin-top: 12px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+.rpgcalendar_response_form {
+    display: inline-flex;
+    gap: 6px;
+}
+
+/* Manage buttons (edit / delete) in the event detail view */
+.rpgcalendar_eventview_manage {
+    margin-top: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+.rpgcalendar_delete_form {
+    display: inline;
+}
+
+/* Sub-calendars: "My calendars" link + management rows */
+.rpgcalendar_calendars_link {
+    margin: 6px 0 10px;
+    text-align: right;
+}
+.rpgcalendar_calrows {
+    display: flex;
+    flex-direction: column;
+}
+.rpgcalendar_calrow {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    padding: 8px 10px;
+    border-top: 1px solid rgba(100, 116, 139, 0.2);
+}
+.rpgcalendar_calrow_form {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    flex: 1;
+}
+.rpgcalendar_calrow_swatch {
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
+    display: inline-block;
+    flex: 0 0 auto;
+}
+.rpgcalendar_calrow_name {
+    min-width: 160px;
+    flex: 1;
+}
+.rpgcalendar_calrow_type {
+    opacity: 0.7;
+}
+.rpgcalendar_colorpick {
+    width: 42px;
+    height: 26px;
+    padding: 0;
+    border: none;
+    background: none;
+    cursor: pointer;
+}
+.rpgcalendar_caladd {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 12px;
+}
+
+/* Sub-calendars stage 2: sharing, invitations, joinable */
+.rpgcalendar_calinvites,
+.rpgcalendar_caljoinable {
+    margin-top: 14px;
+}
+.rpgcalendar_calrow .button {
+    flex: 0 0 auto;
+}
+.rpgcalendar_calrow_delete {
+    display: inline;
+}

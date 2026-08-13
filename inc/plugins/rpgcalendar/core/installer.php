@@ -35,6 +35,7 @@ class Rpgcalendar_Installer
             `start_key`        INT NOT NULL DEFAULT 0,
             `end_key`          INT NOT NULL DEFAULT 0,
             `repeat_type`      TINYINT UNSIGNED NOT NULL DEFAULT 0,
+            `repeat_interval`  SMALLINT UNSIGNED NOT NULL DEFAULT 1,
             `repeat_until_key` INT NOT NULL DEFAULT 0,
             `important`        TINYINT(1) NOT NULL DEFAULT 0,
             `visible`          TINYINT(1) NOT NULL DEFAULT 1,
@@ -43,10 +44,53 @@ class Rpgcalendar_Installer
             `feed_id`          INT UNSIGNED NOT NULL DEFAULT 0,
             `uid`              INT UNSIGNED NOT NULL DEFAULT 0,
             `private`          TINYINT(1) NOT NULL DEFAULT 0,
+            `calendar_id`      INT UNSIGNED NOT NULL DEFAULT 0,
             `dateline`         INT UNSIGNED NOT NULL DEFAULT 0,
             PRIMARY KEY (`eid`),
             KEY `overlap` (`end_key`, `start_key`),
             KEY `feed_uid` (`feed_id`, `source_uid`)
+        ) ENGINE=InnoDB{$collation};");
+
+        // Sub-calendars (Google-Calendar style). type: 0=personal, 1=global/forum.
+        // owner_uid 0 = global. "shared" is layered on via members in a later stage.
+        $db->query("CREATE TABLE IF NOT EXISTS `" . TABLE_PREFIX . "rpgcalendar_calendars` (
+            `cid`           INT UNSIGNED NOT NULL AUTO_INCREMENT,
+            `name`          VARCHAR(120) NOT NULL DEFAULT '',
+            `description`   VARCHAR(255) NOT NULL DEFAULT '',
+            `owner_uid`     INT UNSIGNED NOT NULL DEFAULT 0,
+            `type`          TINYINT UNSIGNED NOT NULL DEFAULT 0,
+            `joinable`      TINYINT(1) NOT NULL DEFAULT 0,
+            `default_color` VARCHAR(7) NOT NULL DEFAULT '#3b82f6',
+            `dateline`      INT UNSIGNED NOT NULL DEFAULT 0,
+            PRIMARY KEY (`cid`),
+            KEY `owner` (`owner_uid`)
+        ) ENGINE=InnoDB{$collation};");
+
+        // Calendar membership: shared personal calendars (owner invites) and
+        // joinable global calendars (users self-subscribe). role 0=viewer,
+        // 1=editor; status 0=invited (pending), 1=accepted.
+        $db->query("CREATE TABLE IF NOT EXISTS `" . TABLE_PREFIX . "rpgcalendar_calendar_members` (
+            `id`       INT UNSIGNED NOT NULL AUTO_INCREMENT,
+            `cid`      INT UNSIGNED NOT NULL DEFAULT 0,
+            `uid`      INT UNSIGNED NOT NULL DEFAULT 0,
+            `role`     TINYINT UNSIGNED NOT NULL DEFAULT 0,
+            `status`   TINYINT UNSIGNED NOT NULL DEFAULT 0,
+            `dateline` INT UNSIGNED NOT NULL DEFAULT 0,
+            PRIMARY KEY (`id`),
+            UNIQUE KEY `cal_user` (`cid`, `uid`),
+            KEY `uid` (`uid`)
+        ) ENGINE=InnoDB{$collation};");
+
+        // Per-user colour + visibility for any calendar key (real 'cal-{cid}' or,
+        // later, virtual keys like 'plotcat-{cid}', 'birthdays', 'feed-{fid}').
+        $db->query("CREATE TABLE IF NOT EXISTS `" . TABLE_PREFIX . "rpgcalendar_calendar_prefs` (
+            `id`           INT UNSIGNED NOT NULL AUTO_INCREMENT,
+            `uid`          INT UNSIGNED NOT NULL DEFAULT 0,
+            `calendar_key` VARCHAR(60) NOT NULL DEFAULT '',
+            `color`        VARCHAR(7) NOT NULL DEFAULT '',
+            `visible`      TINYINT(1) NOT NULL DEFAULT 1,
+            PRIMARY KEY (`id`),
+            UNIQUE KEY `user_cal` (`uid`, `calendar_key`)
         ) ENGINE=InnoDB{$collation};");
 
         $db->query("CREATE TABLE IF NOT EXISTS `" . TABLE_PREFIX . "rpgcalendar_monthtexts` (
@@ -58,6 +102,17 @@ class Rpgcalendar_Installer
             `dateline` INT UNSIGNED NOT NULL DEFAULT 0,
             PRIMARY KEY (`mtid`),
             UNIQUE KEY `yearmonth` (`year`, `month`)
+        ) ENGINE=InnoDB{$collation};");
+
+        $db->query("CREATE TABLE IF NOT EXISTS `" . TABLE_PREFIX . "rpgcalendar_event_invites` (
+            `invite_id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+            `eid`       INT UNSIGNED NOT NULL DEFAULT 0,
+            `uid`       INT UNSIGNED NOT NULL DEFAULT 0,
+            `status`    TINYINT NOT NULL DEFAULT 0,
+            `dateline`  INT UNSIGNED NOT NULL DEFAULT 0,
+            PRIMARY KEY (`invite_id`),
+            UNIQUE KEY `event_user` (`eid`, `uid`),
+            KEY `uid` (`uid`)
         ) ENGINE=InnoDB{$collation};");
 
         $db->query("CREATE TABLE IF NOT EXISTS `" . TABLE_PREFIX . "rpgcalendar_feeds` (
@@ -73,12 +128,131 @@ class Rpgcalendar_Installer
         ) ENGINE=InnoDB{$collation};");
     }
 
+    /**
+     * Adds columns introduced in later versions to an existing installation.
+     * CREATE TABLE IF NOT EXISTS never alters existing tables, so column
+     * upgrades live here. Idempotent: each column is only added if missing.
+     */
+    public static function upgradeSchema(): void
+    {
+        global $db;
+
+        if (!$db->field_exists('repeat_interval', 'rpgcalendar_events')) {
+            $db->add_column('rpgcalendar_events', 'repeat_interval',
+                "SMALLINT UNSIGNED NOT NULL DEFAULT 1 AFTER `repeat_type`");
+        }
+
+        if (!$db->field_exists('calendar_id', 'rpgcalendar_events')) {
+            $db->add_column('rpgcalendar_events', 'calendar_id',
+                "INT UNSIGNED NOT NULL DEFAULT 0 AFTER `private`");
+        }
+
+        if (!$db->field_exists('joinable', 'rpgcalendar_calendars')) {
+            $db->add_column('rpgcalendar_calendars', 'joinable',
+                "TINYINT(1) NOT NULL DEFAULT 0 AFTER `type`");
+        }
+
+        self::migrateEventsToCalendars();
+    }
+
+    /**
+     * One-time, idempotent migration onto the sub-calendar model: ensures the
+     * global "Forum" calendar and a "Persönlich" calendar per author exist, then
+     * assigns every still-unassigned event (calendar_id = 0) to the right one
+     * (private = 0 => Forum, private = 1 => that author's personal calendar).
+     */
+    public static function migrateEventsToCalendars(): void
+    {
+        global $db;
+
+        // Nothing to do once every event carries a calendar_id
+        $pending = $db->fetch_array($db->simple_select(
+            'rpgcalendar_events', 'COUNT(*) AS num', 'calendar_id = 0'
+        ));
+        if ((int)($pending['num'] ?? 0) === 0) {
+            return;
+        }
+
+        $forum_cid = self::ensureGlobalForumCalendar();
+
+        // Forum-wide (public) events
+        $db->update_query('rpgcalendar_events', ['calendar_id' => (int)$forum_cid],
+            'calendar_id = 0 AND private = 0');
+
+        // Personal events: one calendar per distinct author
+        $query = $db->query("
+            SELECT DISTINCT uid
+            FROM " . TABLE_PREFIX . "rpgcalendar_events
+            WHERE calendar_id = 0 AND private = 1 AND uid > 0
+        ");
+        while ($row = $db->fetch_array($query)) {
+            $uid = (int)$row['uid'];
+            $cid = self::ensurePersonalCalendarFor($uid);
+            $db->update_query('rpgcalendar_events', ['calendar_id' => $cid],
+                'calendar_id = 0 AND private = 1 AND uid = ' . $uid);
+        }
+
+        // Orphans (private with no author) fall back to the Forum calendar
+        $db->update_query('rpgcalendar_events', ['calendar_id' => (int)$forum_cid],
+            'calendar_id = 0');
+    }
+
+    /** Get-or-create the single global "Forum" calendar. Returns its cid. */
+    public static function ensureGlobalForumCalendar(): int
+    {
+        global $db;
+
+        $row = $db->fetch_array($db->simple_select(
+            'rpgcalendar_calendars', 'cid', "type = 1 AND owner_uid = 0", ['limit' => 1]
+        ));
+        if ($row) {
+            return (int)$row['cid'];
+        }
+
+        return (int)$db->insert_query('rpgcalendar_calendars', [
+            'name'          => 'Forum',
+            'description'   => $db->escape_string('Forum-wide events visible to everyone.'),
+            'owner_uid'     => 0,
+            'type'          => 1,
+            'default_color' => '#64748b',
+            'dateline'      => TIME_NOW,
+        ]);
+    }
+
+    /** Get-or-create a user's default personal calendar. Returns its cid. */
+    public static function ensurePersonalCalendarFor(int $uid): int
+    {
+        global $db;
+
+        $uid = (int)$uid;
+        $row = $db->fetch_array($db->simple_select(
+            'rpgcalendar_calendars', 'cid',
+            "type = 0 AND owner_uid = " . $uid, ['order_by' => 'cid', 'order_dir' => 'ASC', 'limit' => 1]
+        ));
+        if ($row) {
+            return (int)$row['cid'];
+        }
+
+        return (int)$db->insert_query('rpgcalendar_calendars', [
+            'name'          => 'Persönlich',
+            'description'   => '',
+            'owner_uid'     => $uid,
+            'type'          => 0,
+            'default_color' => '#3b82f6',
+            'dateline'      => TIME_NOW,
+        ]);
+    }
+
     public static function dropTables(): void
     {
         global $db;
 
         $db->drop_table('rpgcalendar_events');
         $db->drop_table('rpgcalendar_monthtexts');
+        $db->drop_table('rpgcalendar_event_invites');
+        $db->drop_table('rpgcalendar_calendars');
+        $db->drop_table('rpgcalendar_calendar_prefs');
+        $db->drop_table('rpgcalendar_calendar_members');
         $db->drop_table('rpgcalendar_feeds');
     }
 
@@ -154,6 +328,31 @@ class Rpgcalendar_Installer
                 'Month (1-12) shown when the page is opened without parameters. 0 = the real current month.',
                 'numeric', '0',
             ],
+            'team_groups' => [
+                'Team groups',
+                'User groups whose members may create forum-wide events (visible to '
+                    . 'everyone) from the day view. All other logged-in members can only '
+                    . 'create personal events for themselves and invite individual members. '
+                    . 'Leave empty to let only admins create forum-wide events.',
+                'groupselect', '',
+            ],
+            'current_inplay' => [
+                'Current in-play months (global variable)',
+                'Comma-separated year-month tokens (e.g. 1487-3, 1487-4) whose month texts '
+                    . 'are collected into the global template variable {$rpgcalendar_current_monthtexts} '
+                    . '(usable in templates and in forum/category descriptions). Empty disables the '
+                    . 'variable (no query overhead). Counterpart to plotcp\'s plotcp_current_inplay '
+                    . '(separate settings per plugin, same input format).',
+                'text', '',
+            ],
+            'html_titles' => [
+                'Allow HTML in event titles',
+                'Render HTML in event titles (subjects) instead of escaping it. '
+                    . 'Only enable this if you trust everyone who can create events – on public '
+                    . 'calendars this allows those users to inject markup. Tooltips, the page title '
+                    . 'and the breadcrumb always stay plain text.',
+                'onoff', '0',
+            ],
         ];
     }
 
@@ -209,6 +408,56 @@ class Rpgcalendar_Installer
         $db->delete_query('settings', "name LIKE 'rpgcalendar\_%'");
         $db->delete_query('settinggroups', "name = 'rpgcalendar'");
         rebuild_settings();
+    }
+
+    /** Datacache key under which setting values survive a deactivation. */
+    const SETTINGS_CACHE = 'rpgcalendar_settings';
+
+    /**
+     * Snapshots the current setting values into the datacache so a following
+     * removeSettings() (on deactivation) does not lose the admin's choices.
+     */
+    public static function backupSettingValues(): void
+    {
+        global $db, $cache;
+
+        $values = [];
+        $query = $db->simple_select('settings', 'name, value', "name LIKE 'rpgcalendar\_%'");
+        while ($row = $db->fetch_array($query)) {
+            $values[(string)$row['name']] = (string)$row['value'];
+        }
+        if ($values) {
+            $cache->update(self::SETTINGS_CACHE, $values);
+        }
+    }
+
+    /**
+     * Writes backed-up values back onto the freshly (re)created settings.
+     * Called on activation after installSettings(); no-op on first install.
+     */
+    public static function restoreSettingValues(): void
+    {
+        global $db, $cache;
+
+        $values = $cache->read(self::SETTINGS_CACHE);
+        if (!is_array($values) || !$values) {
+            return;
+        }
+        foreach ($values as $name => $value) {
+            $db->update_query('settings',
+                ['value' => $db->escape_string((string)$value)],
+                "name = '" . $db->escape_string((string)$name) . "'"
+            );
+        }
+        rebuild_settings();
+    }
+
+    /** Drops the value backup for good (only on uninstall). */
+    public static function clearSettingBackup(): void
+    {
+        global $cache;
+
+        $cache->delete(self::SETTINGS_CACHE);
     }
 
     /**

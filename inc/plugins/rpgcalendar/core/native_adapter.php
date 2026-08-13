@@ -100,7 +100,9 @@ class Rpgcalendar_NativeAdapter
                     'source'      => 'native',
                     'title'       => (string)$event['name'],
                     'description' => '',
-                    'url'         => $mybb->settings['bburl'] . '/calendar.php?action=event&eid=' . (int)$event['eid'],
+                    // Own detail view instead of the native calendar.php page
+                    'url'         => $mybb->settings['bburl'] . '/rpgcalendar.php?action=event&eid=' . (int)$event['eid']
+                                     . '&year=' . $year . '&month=' . $month . '&day=' . $d,
                     'start'       => ['y' => $year, 'm' => $month, 'd' => $d],
                     'end'         => ['y' => $year, 'm' => $month, 'd' => $d],
                     'important'   => false,
@@ -110,6 +112,61 @@ class Rpgcalendar_NativeAdapter
         }
 
         return $days;
+    }
+
+    /**
+     * Loads a single native event by eid for the detail view. Applies the same
+     * calendar / visibility / privacy guards as the month merge so nothing
+     * becomes visible here that would be hidden in the native calendar.
+     *
+     * @return array|null ['eid','name','description','uid'] or null if the event
+     *                     is missing, from another calendar, or not viewable.
+     */
+    public function getNativeEvent(int $eid): ?array
+    {
+        global $mybb;
+
+        if ((int)($mybb->settings['rpgcalendar_shownative'] ?? 0) !== 1
+            || !is_array($this->calendar)
+            || $eid <= 0
+        ) {
+            return null;
+        }
+
+        require_once MYBB_ROOT . 'inc/functions_calendar.php';
+
+        $permissions = get_calendar_permissions((int)$this->calendar['cid']);
+        if (empty($permissions['canviewcalendar'])) {
+            return null;
+        }
+
+        $event = $this->db->fetch_array($this->db->simple_select(
+            'events', '*',
+            'eid = ' . $eid . ' AND cid = ' . (int)$this->calendar['cid']
+        ));
+        if (!$event) {
+            return null;
+        }
+
+        // Unapproved events are only visible to moderators
+        if ((int)$event['visible'] !== 1 && empty($permissions['canmoderateevents'])) {
+            return null;
+        }
+
+        // Private events only for their author (mirrors native behaviour)
+        if ((int)$event['private'] === 1
+            && (int)$event['uid'] !== (int)$mybb->user['uid']
+            && empty($permissions['canmoderateevents'])
+        ) {
+            return null;
+        }
+
+        return [
+            'eid'         => (int)$event['eid'],
+            'name'        => (string)$event['name'],
+            'description' => (string)$event['description'],
+            'uid'         => (int)$event['uid'],
+        ];
     }
 
     /**

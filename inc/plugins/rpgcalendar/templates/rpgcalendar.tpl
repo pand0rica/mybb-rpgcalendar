@@ -7,6 +7,7 @@
 {$header}
 <div class="rpgcalendar">
 {$rpgcalendar_nav}
+{$rpgcalendar_calendars_link}
 {$rpgcalendar_monthtext}
 <table border="0" cellspacing="{$theme['borderwidth']}" cellpadding="{$theme['tablespace']}" class="tborder rpgcalendar_table">
 <tr>

@@ -17,6 +17,17 @@ $l['rpgcalendar_tab_edit_event']      = "Ereignis bearbeiten";
 $l['rpgcalendar_tab_desc_edit_event'] = "Dieses erweiterte Ereignis ändern.";
 $l['rpgcalendar_tab_monthtexts']      = "Monatstexte";
 $l['rpgcalendar_tab_desc_monthtexts'] = "Ein Freitext pro Monat und Jahr (z.B. Wetter), wird über der Monatsansicht angezeigt. MyCode ist erlaubt.";
+$l['rpgcalendar_tab_calendars']       = "Kalender";
+$l['rpgcalendar_tab_desc_calendars']  = "Globale Teilkalender, die alle sehen. Persönliche Kalender legen Mitglieder selbst im Frontend an.";
+$l['rpgcalendar_cal_add']             = "Globalen Kalender anlegen";
+$l['rpgcalendar_cal_name']            = "Name";
+$l['rpgcalendar_cal_color']           = "Standardfarbe";
+$l['rpgcalendar_cal_color_desc']      = "Fallback-Farbe, bis ein Mitglied für diesen Kalender eine eigene Farbe wählt.";
+$l['rpgcalendar_cal_joinable']        = "Beitretbar";
+$l['rpgcalendar_cal_joinable_desc']   = "Wenn ja, können Mitglieder diesen Kalender selbst abonnieren und Ereignisse eintragen; nur Abonnenten sehen ihn. Wenn nein, ist es ein öffentlicher Kalender für alle sichtbar (Team schreibt).";
+$l['rpgcalendar_calendar_saved']      = "Der Kalender wurde gespeichert.";
+$l['rpgcalendar_calendar_deleted']    = "Der Kalender wurde gelöscht; seine Ereignisse wurden in den Forum-Kalender verschoben.";
+$l['rpgcalendar_error_calendar_name'] = "Bitte einen Kalendernamen eingeben.";
 
 // Ereignis-Liste
 $l['rpgcalendar_th_date']      = "Datum";
@@ -41,6 +52,8 @@ $l['rpgcalendar_field_end']          = "Enddatum";
 $l['rpgcalendar_field_end_desc']     = "Nur bei mehrtägigen Ereignissen. Darf nicht vor dem Startdatum liegen.";
 $l['rpgcalendar_field_repeat']       = "Wiederholung";
 $l['rpgcalendar_field_repeat_desc']  = "Monatliche Wiederholungen überspringen Monate ohne den Starttag (z.B. den 31. im Februar); jährliche am 29.2. überspringen Nicht-Schaltjahre.";
+$l['rpgcalendar_field_interval']      = "Wiederhol-Intervall";
+$l['rpgcalendar_field_interval_desc'] = "Wiederholung alle N Einheiten der obigen Art, z.B. 2 = alle 2 Wochen / Monate / Jahre. 1 = jedes Mal.";
 $l['rpgcalendar_field_repeat_until'] = "Wiederholen bis";
 $l['rpgcalendar_field_repeat_until_desc'] = "Optionales letztes Wiederholungsdatum (Tag / Monat / Jahr). 0 lassen für unbegrenzt.";
 $l['rpgcalendar_field_important']    = "Wichtiges Ereignis";

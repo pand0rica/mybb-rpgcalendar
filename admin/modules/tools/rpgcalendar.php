@@ -48,6 +48,11 @@ function rpgcalendar_acp_tabs(string $active): void
             'link'        => 'index.php?module=tools-rpgcalendar&amp;action=monthtexts',
             'description' => $lang->rpgcalendar_tab_desc_monthtexts,
         ],
+        'calendars' => [
+            'title'       => $lang->rpgcalendar_tab_calendars,
+            'link'        => 'index.php?module=tools-rpgcalendar&amp;action=calendars',
+            'description' => $lang->rpgcalendar_tab_desc_calendars,
+        ],
     ];
 
     if ($active === 'edit_event') {
@@ -88,9 +93,10 @@ function rpgcalendar_acp_read_event_input(): array
         'start_year'  => $mybb->get_input('start_year', MyBB::INPUT_INT),
         'start_month' => $mybb->get_input('start_month', MyBB::INPUT_INT),
         'start_day'   => $mybb->get_input('start_day', MyBB::INPUT_INT),
-        'repeat_type' => $mybb->get_input('repeat_type', MyBB::INPUT_INT),
-        'important'   => $mybb->get_input('important', MyBB::INPUT_INT),
-        'visible'     => $mybb->get_input('visible', MyBB::INPUT_INT),
+        'repeat_type'     => $mybb->get_input('repeat_type', MyBB::INPUT_INT),
+        'repeat_interval' => max(1, $mybb->get_input('repeat_interval', MyBB::INPUT_INT)),
+        'important'       => $mybb->get_input('important', MyBB::INPUT_INT),
+        'visible'         => $mybb->get_input('visible', MyBB::INPUT_INT),
     ];
 
     if ($data['title'] === '') {
@@ -257,6 +263,13 @@ function rpgcalendar_acp_event_form(array $values, array $errors, string $form_a
         'repeat_type'
     );
 
+    $form_container->output_row(
+        $lang->rpgcalendar_field_interval,
+        $lang->rpgcalendar_field_interval_desc,
+        $form->generate_numeric_field('repeat_interval', max(1, (int)($values['repeat_interval'] ?? 1)), ['id' => 'repeat_interval', 'min' => 1, 'max' => 999, 'style' => 'width: 70px']),
+        'repeat_interval'
+    );
+
     $until = ['day' => 0, 'month' => 0, 'year' => 0];
     if ((int)$values['repeat_until_key'] > 0) {
         $key = (int)$values['repeat_until_key'];
@@ -308,6 +321,7 @@ function rpgcalendar_acp_event_defaults(): array
         'start_key'        => 0,
         'end_key'          => 0,
         'repeat_type'      => 0,
+        'repeat_interval'  => 1,
         'repeat_until_key' => 0,
         'important'        => 1,
         'visible'          => 1,
@@ -343,6 +357,15 @@ if ($action === 'do_add_event' || $action === 'do_edit_event') {
     }
 
     $data['uid'] = (int)$mybb->user['uid'];
+    // New ACP events are forum-wide -> assign the global Forum calendar so they
+    // are visible under the calendar-based access model.
+    if ($eid === 0) {
+        require_once MYBB_ROOT . 'inc/plugins/rpgcalendar/core/installer.php';
+        $data['calendar_id'] = Rpgcalendar_Installer::ensureGlobalForumCalendar();
+    } else {
+        $existing = $rpgcalendar_db->getEvent($eid);
+        $data['calendar_id'] = (int)($existing['calendar_id'] ?? 0);
+    }
     $rpgcalendar_db->saveEvent($data, $eid);
 
     flash_message($lang->rpgcalendar_saved, 'success');
@@ -386,6 +409,51 @@ if ($action === 'delete_monthtext' && $mybb->request_method === 'post') {
     admin_redirect('index.php?module=tools-rpgcalendar&action=monthtexts');
 }
 
+// Create or rename/recolour a global calendar
+if ($action === 'do_calendar' && $mybb->request_method === 'post') {
+    require_once MYBB_ROOT . 'inc/plugins/rpgcalendar/core/frontend.php';
+    $cid   = $mybb->get_input('cid', MyBB::INPUT_INT);
+    $name  = trim($mybb->get_input('name'));
+    $color = Rpgcalendar_Frontend::sanitizeColor($mybb->get_input('default_color'));
+    if ($color === '') {
+        $color = '#64748b';
+    }
+
+    $joinable = ($mybb->get_input('joinable', MyBB::INPUT_INT) === 1) ? 1 : 0;
+
+    if ($name === '') {
+        flash_message($lang->rpgcalendar_error_calendar_name, 'error');
+    } elseif ($cid > 0) {
+        $rpgcalendar_db->updateCalendar($cid, [
+            'name' => my_substr($name, 0, 120), 'default_color' => $color, 'joinable' => $joinable,
+        ]);
+        flash_message($lang->rpgcalendar_calendar_saved, 'success');
+    } else {
+        $rpgcalendar_db->createCalendar([
+            'name' => my_substr($name, 0, 120), 'owner_uid' => 0, 'type' => 1,
+            'default_color' => $color, 'joinable' => $joinable,
+        ]);
+        flash_message($lang->rpgcalendar_calendar_saved, 'success');
+    }
+    admin_redirect('index.php?module=tools-rpgcalendar&action=calendars');
+}
+
+if ($action === 'delete_calendar' && $mybb->request_method === 'post') {
+    $cid = $mybb->get_input('cid', MyBB::INPUT_INT);
+    $cal = $rpgcalendar_db->getCalendar($cid);
+    if (!$cal || (int)$cal['type'] !== 1) {
+        flash_message($lang->rpgcalendar_error_not_found, 'error');
+    } else {
+        // Move events to another global calendar (the Forum), else leave 0
+        require_once MYBB_ROOT . 'inc/plugins/rpgcalendar/core/installer.php';
+        $forum_cid = Rpgcalendar_Installer::ensureGlobalForumCalendar();
+        $fallback  = ($forum_cid === $cid) ? 0 : $forum_cid;
+        $rpgcalendar_db->deleteCalendar($cid, $fallback);
+        flash_message($lang->rpgcalendar_calendar_deleted, 'success');
+    }
+    admin_redirect('index.php?module=tools-rpgcalendar&action=calendars');
+}
+
 // ---------------------------------------------------------------------
 // Views
 // ---------------------------------------------------------------------
@@ -403,6 +471,77 @@ if ($action === 'edit_event') {
         admin_redirect('index.php?module=tools-rpgcalendar');
     }
     rpgcalendar_acp_event_form($event, [], 'do_edit_event', 'edit_event');
+    exit;
+}
+
+if ($action === 'calendars') {
+    require_once MYBB_ROOT . 'inc/plugins/rpgcalendar/core/frontend.php';
+    $page->output_header($lang->rpgcalendar);
+    rpgcalendar_acp_tabs('calendars');
+
+    $edit_cid = $mybb->get_input('cid', MyBB::INPUT_INT);
+    $edit_row = null;
+
+    $table = new Table();
+    $table->construct_header($lang->rpgcalendar_cal_name);
+    $table->construct_header($lang->rpgcalendar_cal_color, ['width' => '18%']);
+    $table->construct_header($lang->rpgcalendar_cal_joinable, ['width' => '14%', 'class' => 'align_center']);
+    $table->construct_header($lang->rpgcalendar_th_controls, ['width' => '20%', 'class' => 'align_center']);
+
+    foreach ($rpgcalendar_db->getGlobalCalendars() as $cal) {
+        if ($edit_cid > 0 && (int)$cal['cid'] === $edit_cid) {
+            $edit_row = $cal;
+        }
+        $color = Rpgcalendar_Frontend::sanitizeColor((string)$cal['default_color']) ?: '#64748b';
+        $delete_form = '<form action="index.php" method="post" style="display:inline">'
+            . '<input type="hidden" name="module" value="tools-rpgcalendar" />'
+            . '<input type="hidden" name="action" value="delete_calendar" />'
+            . '<input type="hidden" name="cid" value="' . (int)$cal['cid'] . '" />'
+            . '<input type="hidden" name="my_post_key" value="' . $mybb->post_code . '" />'
+            . '<input type="submit" class="submit_button" value="' . $lang->rpgcalendar_delete . '" />'
+            . '</form>';
+
+        $table->construct_cell(htmlspecialchars_uni((string)$cal['name']));
+        $table->construct_cell('<span style="display:inline-block;width:14px;height:14px;border-radius:3px;vertical-align:middle;background:'
+            . $color . '"></span> ' . htmlspecialchars_uni($color));
+        $table->construct_cell(((int)$cal['joinable'] === 1) ? $lang->yes : $lang->no, ['class' => 'align_center']);
+        $table->construct_cell(
+            '<a href="index.php?module=tools-rpgcalendar&amp;action=calendars&amp;cid=' . (int)$cal['cid'] . '">'
+            . $lang->rpgcalendar_edit . '</a> &nbsp; ' . $delete_form,
+            ['class' => 'align_center']
+        );
+        $table->construct_row();
+    }
+    $table->output($lang->rpgcalendar_tab_calendars);
+
+    $form_name  = $edit_row ? (string)$edit_row['name'] : '';
+    $form_color = $edit_row ? Rpgcalendar_Frontend::sanitizeColor((string)$edit_row['default_color']) : '#64748b';
+    if ($form_color === '') {
+        $form_color = '#64748b';
+    }
+
+    $form = new Form('index.php?module=tools-rpgcalendar&amp;action=do_calendar', 'post');
+    if ($edit_row) {
+        echo $form->generate_hidden_field('cid', (int)$edit_row['cid']);
+    }
+    $form_container = new FormContainer($edit_row ? $lang->rpgcalendar_edit : $lang->rpgcalendar_cal_add);
+    $form_container->output_row(
+        $lang->rpgcalendar_cal_name . ' <em>*</em>', '',
+        $form->generate_text_box('name', $form_name, ['id' => 'name']), 'name'
+    );
+    $form_container->output_row(
+        $lang->rpgcalendar_cal_color, $lang->rpgcalendar_cal_color_desc,
+        '<input type="color" name="default_color" value="' . htmlspecialchars_uni($form_color) . '" />', 'default_color'
+    );
+    $form_container->output_row(
+        $lang->rpgcalendar_cal_joinable, $lang->rpgcalendar_cal_joinable_desc,
+        $form->generate_yes_no_radio('joinable', $edit_row ? (int)$edit_row['joinable'] : 0), 'joinable'
+    );
+    $form_container->end();
+    $form->output_submit_wrapper([$form->generate_submit_button($lang->rpgcalendar_save)]);
+    $form->end();
+
+    $page->output_footer();
     exit;
 }
 
@@ -425,9 +564,12 @@ if ($action === 'monthtexts') {
         if ($edit_mtid > 0 && (int)$text['mtid'] === $edit_mtid) {
             $edit_row = $text;
         }
-        $excerpt = $text['content'];
-        if (my_strlen($excerpt) > 120) {
-            $excerpt = my_substr($excerpt, 0, 120) . '&hellip;';
+        // Escape first, then append the ellipsis entity, so htmlspecialchars_uni
+        // does not turn &hellip; into the literal text "&hellip;".
+        $truncated = (my_strlen($text['content']) > 120);
+        $excerpt = htmlspecialchars_uni($truncated ? my_substr($text['content'], 0, 120) : $text['content']);
+        if ($truncated) {
+            $excerpt .= '&hellip;';
         }
 
         $delete_form = '<form action="index.php" method="post" style="display:inline">'
@@ -440,7 +582,7 @@ if ($action === 'monthtexts') {
 
         $table->construct_cell((int)$text['year']);
         $table->construct_cell(htmlspecialchars_uni($lang->{'rpgcalendar_month_' . (int)$text['month']}));
-        $table->construct_cell(htmlspecialchars_uni($excerpt));
+        $table->construct_cell($excerpt);
         $table->construct_cell(
             '<a href="index.php?module=tools-rpgcalendar&amp;action=monthtexts&amp;mtid=' . (int)$text['mtid'] . '">'
             . $lang->rpgcalendar_edit . '</a> &nbsp; ' . $delete_form,

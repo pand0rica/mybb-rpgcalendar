@@ -19,11 +19,20 @@ class Rpgcalendar_Engine
     const REPEAT_MONTHLY = 2;
     const REPEAT_YEARLY  = 3;
 
+    /** Default colour of the built-in virtual "birthdays" calendar. */
+    const BIRTHDAY_COLOR = '#f59e0b';
+
     /** @var Rpgcalendar_Database */
     private $database;
 
     /** @var Rpgcalendar_NativeAdapter|null */
     private $native_adapter;
+
+    /** @var array calendar_key => default_color, for the current month render */
+    private $view_calendars = [];
+
+    /** @var array calendar_key => ['color','visible'], viewer preferences */
+    private $view_prefs = [];
 
     public function __construct($database, $native_adapter = null)
     {
@@ -149,6 +158,19 @@ class Rpgcalendar_Engine
         $month_start_key = self::dateKey($year, $month, 1);
         $month_end_key   = self::dateKey($year, $month, $num_days);
 
+        // Sub-calendar default colours keyed by calendar key ('cal-{cid}' for
+        // real calendars, 'birthdays' for the built-in one) + this viewer's
+        // colour/visibility preferences. Provider (plot) events carry their own
+        // key + default colour.
+        $this->view_calendars = [];
+        foreach ($this->database->getCalendarColors() as $cid => $color) {
+            $this->view_calendars['cal-' . (int)$cid] = $color;
+        }
+        $this->view_calendars['birthdays'] = self::BIRTHDAY_COLOR;
+        $this->view_prefs = $this->database->getUserPrefs($viewer_uid);
+
+        $birthday_state = $this->resolveCalendar('birthdays');
+
         $days = [];
         for ($d = 1; $d <= $num_days; $d++) {
             $days[$d] = ['events' => [], 'birthdays' => []];
@@ -171,11 +193,14 @@ class Rpgcalendar_Engine
                     }
                 }
             }
-            $birthday_days = $this->native_adapter->getBirthdaysForMonth($year, $month);
-            foreach ($birthday_days as $d => $entries) {
-                if (isset($days[$d])) {
-                    foreach ($entries as $entry) {
-                        $days[$d]['birthdays'][] = $entry;
+            // Birthdays only if the viewer has not hidden the birthday calendar
+            if ($birthday_state['visible']) {
+                $birthday_days = $this->native_adapter->getBirthdaysForMonth($year, $month);
+                foreach ($birthday_days as $d => $entries) {
+                    if (isset($days[$d])) {
+                        foreach ($entries as $entry) {
+                            $days[$d]['birthdays'][] = $entry;
+                        }
                     }
                 }
             }
@@ -194,6 +219,15 @@ class Rpgcalendar_Engine
                     $event = self::sanitizeProvidedEvent($provided);
                     if ($event === null) {
                         continue; // a broken provider must never break the page
+                    }
+                    // Colour/visibility from the event's (virtual) sub-calendar,
+                    // e.g. one calendar per plot category ('plotcat-{cid}').
+                    if ($event['calendar_key'] !== '') {
+                        $state = $this->resolveCalendar($event['calendar_key'], $event['color']);
+                        if (!$state['visible']) {
+                            continue; // viewer hid this plot category
+                        }
+                        $event['color'] = $state['color'];
                     }
                     $this->placeEvent($event, $month_start_n, $month_end_n, $days, $important);
                 }
@@ -218,11 +252,84 @@ class Rpgcalendar_Engine
         }
 
         return [
-            'grid'      => $this->buildGrid($year, $month, $days, $startofweek),
-            'monthtext' => $this->database->getMonthText($year, $month),
-            'important' => $important,
-            'today_day' => $today_day,
+            'grid'           => $this->buildGrid($year, $month, $days, $startofweek),
+            'monthtext'      => $this->database->getMonthText($year, $month),
+            'important'      => $important,
+            'today_day'      => $today_day,
+            'birthday_color' => $birthday_state['color'],
         ];
+    }
+
+    /**
+     * Resolves colour + visibility of a calendar key for the current viewer:
+     * pref colour overrides the calendar default (or the given fallback);
+     * pref visible = 0 hides it.
+     *
+     * @return array ['visible' => bool, 'color' => string]
+     */
+    private function resolveCalendar(string $key, string $fallback_color = ''): array
+    {
+        $pref    = $this->view_prefs[$key] ?? null;
+        $visible = ($pref === null || (int)$pref['visible'] === 1);
+
+        if ($pref !== null && $pref['color'] !== '') {
+            $color = (string)$pref['color'];
+        } elseif (isset($this->view_calendars[$key])) {
+            $color = (string)$this->view_calendars[$key];
+        } else {
+            $color = $fallback_color;
+        }
+
+        return ['visible' => $visible, 'color' => $color];
+    }
+
+    /**
+     * Collects the virtual sub-calendars for the "My calendars" page: the
+     * built-in birthdays calendar plus provider calendars (e.g. one per plot
+     * category) via the 'rpgcalendar_collect_calendars' hook. Keys must not
+     * collide with real calendars ('cal-*').
+     *
+     * @return array[] list of ['key','name','default_color']
+     */
+    public static function collectVirtualCalendars(): array
+    {
+        global $plugins, $mybb, $lang;
+
+        $cals = [];
+
+        if ((int)($mybb->settings['rpgcalendar_showbirthdays'] ?? 0) === 1) {
+            if (!isset($lang->rpgcalendar_cal_birthdays)) {
+                $lang->load('rpgcalendar');
+            }
+            $cals[] = [
+                'key'           => 'birthdays',
+                'name'          => $lang->rpgcalendar_cal_birthdays,
+                'default_color' => self::BIRTHDAY_COLOR,
+            ];
+        }
+
+        if (is_object($plugins)) {
+            $args = ['calendars' => []];
+            $plugins->run_hooks('rpgcalendar_collect_calendars', $args);
+            if (is_array($args['calendars'])) {
+                foreach ($args['calendars'] as $vc) {
+                    if (!is_array($vc) || empty($vc['key']) || !isset($vc['name'])) {
+                        continue;
+                    }
+                    $key = preg_replace('/[^a-z0-9_-]/', '', strtolower((string)$vc['key']));
+                    if ($key === '' || strpos($key, 'cal-') === 0) {
+                        continue; // 'cal-*' is reserved for real calendars
+                    }
+                    $color = isset($vc['default_color']) ? (string)$vc['default_color'] : '#64748b';
+                    if (!preg_match('/^#[0-9a-fA-F]{6}$/', $color)) {
+                        $color = '#64748b';
+                    }
+                    $cals[] = ['key' => $key, 'name' => (string)$vc['name'], 'default_color' => strtolower($color)];
+                }
+            }
+        }
+
+        return $cals;
     }
 
     /**
@@ -240,6 +347,7 @@ class Rpgcalendar_Engine
         $end_n   = self::dayNumber((int)$row['end_year'], (int)$row['end_month'], (int)$row['end_day']);
         $span    = max(0, $end_n - $start_n);
         $until_key = (int)$row['repeat_until_key'];
+        $interval  = max(1, (int)($row['repeat_interval'] ?? 1)); // "every N weeks/months/years"
 
         $view = self::fromDayNumber($month_start_n); // viewed year/month
 
@@ -249,10 +357,11 @@ class Rpgcalendar_Engine
                 if ($start_n > $month_end_n) {
                     break;
                 }
-                $kmin = max(0, self::floorDiv($month_start_n - $span - $start_n + 6, 7)); // ceil()
-                $kmax = self::floorDiv($month_end_n - $start_n, 7);
+                $step = 7 * $interval;
+                $kmin = max(0, self::floorDiv($month_start_n - $span - $start_n + $step - 1, $step)); // ceil()
+                $kmax = self::floorDiv($month_end_n - $start_n, $step);
                 for ($k = $kmin; $k <= $kmax; $k++) {
-                    $occurrence_starts[] = $start_n + 7 * $k;
+                    $occurrence_starts[] = $start_n + $step * $k;
                 }
                 break;
 
@@ -261,6 +370,11 @@ class Rpgcalendar_Engine
                 for ($i = 0; $i <= $back; $i++) {
                     list($cy, $cm) = self::shiftMonth($view['y'], $view['m'], -$i);
                     if ($cy < $start_y || ($cy === $start_y && $cm < $start_m)) {
+                        continue;
+                    }
+                    // Only months that are a whole number of intervals from the start
+                    $month_diff = ($cy - $start_y) * 12 + ($cm - $start_m);
+                    if ($month_diff % $interval !== 0) {
                         continue;
                     }
                     if ($start_d > self::daysInMonth($cy, $cm)) {
@@ -277,6 +391,9 @@ class Rpgcalendar_Engine
                     if ($cy < $start_y) {
                         continue;
                     }
+                    if (($cy - $start_y) % $interval !== 0) {
+                        continue;
+                    }
                     if ($start_d > self::daysInMonth($cy, $start_m)) {
                         continue;
                     }
@@ -289,6 +406,15 @@ class Rpgcalendar_Engine
                 $occurrence_starts[] = $start_n;
                 break;
         }
+
+        // Resolve the event's sub-calendar once: skip the whole row if the viewer
+        // hid that calendar, else keep its key + effective colour for rendering.
+        $calendar_key = 'cal-' . (int)$row['calendar_id'];
+        $state = $this->resolveCalendar($calendar_key);
+        if (!$state['visible']) {
+            return;
+        }
+        $calendar_color = $state['color'];
 
         foreach ($occurrence_starts as $occ_start_n) {
             if ($occ_start_n < $start_n) {
@@ -306,16 +432,23 @@ class Rpgcalendar_Engine
             }
             $occ_end = self::fromDayNumber($occ_end_n);
 
+            // Detail view link (raw '&'; the renderer escapes it once). The day
+            // is the occurrence start, so "back to the day" lands on the right day.
+            $detail_url = 'rpgcalendar.php?action=event&source=extended&eid=' . (int)$row['eid']
+                . '&year=' . $occ_start['y'] . '&month=' . $occ_start['m'] . '&day=' . $occ_start['d'];
+
             $event = [
-                'id'          => 'ext-' . (int)$row['eid'],
-                'source'      => 'extended',
-                'title'       => (string)$row['title'],
-                'description' => (string)$row['description'],
-                'url'         => '',
-                'start'       => $occ_start,
-                'end'         => $occ_end,
-                'important'   => ((int)$row['important'] === 1),
-                'badge'       => ((string)$row['source'] === 'ics') ? 'ics' : 'extended',
+                'id'           => 'ext-' . (int)$row['eid'],
+                'source'       => 'extended',
+                'title'        => (string)$row['title'],
+                'description'  => (string)$row['description'],
+                'url'          => $detail_url,
+                'start'        => $occ_start,
+                'end'          => $occ_end,
+                'important'    => ((int)$row['important'] === 1),
+                'badge'        => ((string)$row['source'] === 'ics') ? 'ics' : 'extended',
+                'calendar_key' => $calendar_key,
+                'color'        => $calendar_color,
             ];
             $this->placeEvent($event, $month_start_n, $month_end_n, $days, $important);
         }
@@ -389,16 +522,30 @@ class Rpgcalendar_Engine
             $url = '';
         }
 
+        // Optional virtual sub-calendar the event belongs to (e.g. a plot
+        // category 'plotcat-{cid}') plus its default colour.
+        $calendar_key = isset($provided['calendar_key'])
+            ? preg_replace('/[^a-z0-9_-]/', '', strtolower((string)$provided['calendar_key'])) : '';
+        if ($calendar_key !== '' && strpos($calendar_key, 'cal-') === 0) {
+            $calendar_key = ''; // 'cal-*' is reserved for real calendars
+        }
+        $color = isset($provided['default_color']) ? (string)$provided['default_color'] : '';
+        if (!preg_match('/^#[0-9a-fA-F]{6}$/', $color)) {
+            $color = '';
+        }
+
         return [
-            'id'          => isset($provided['id']) ? preg_replace('/[^a-zA-Z0-9_-]/', '', (string)$provided['id']) : 'provided-0',
-            'source'      => isset($provided['source']) ? preg_replace('/[^a-z0-9_-]/', '', strtolower((string)$provided['source'])) : 'plot',
-            'title'       => $title,
-            'description' => isset($provided['description']) ? (string)$provided['description'] : '',
-            'url'         => $url,
-            'start'       => $start,
-            'end'         => $end,
-            'important'   => !isset($provided['important']) || !empty($provided['important']),
-            'badge'       => $badge,
+            'id'           => isset($provided['id']) ? preg_replace('/[^a-zA-Z0-9_-]/', '', (string)$provided['id']) : 'provided-0',
+            'source'       => isset($provided['source']) ? preg_replace('/[^a-z0-9_-]/', '', strtolower((string)$provided['source'])) : 'plot',
+            'title'        => $title,
+            'description'  => isset($provided['description']) ? (string)$provided['description'] : '',
+            'url'          => $url,
+            'start'        => $start,
+            'end'          => $end,
+            'important'    => !isset($provided['important']) || !empty($provided['important']),
+            'badge'        => $badge,
+            'calendar_key' => $calendar_key,
+            'color'        => strtolower($color),
         ];
     }
 

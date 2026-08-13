@@ -17,6 +17,17 @@ $l['rpgcalendar_tab_edit_event']      = "Edit event";
 $l['rpgcalendar_tab_desc_edit_event'] = "Change this extended event.";
 $l['rpgcalendar_tab_monthtexts']      = "Month texts";
 $l['rpgcalendar_tab_desc_monthtexts'] = "One free text per month and year (e.g. weather), shown above the month view. MyCode is allowed.";
+$l['rpgcalendar_tab_calendars']       = "Calendars";
+$l['rpgcalendar_tab_desc_calendars']  = "Global sub-calendars everyone can see. Members create their own personal calendars on the frontend.";
+$l['rpgcalendar_cal_add']             = "Add global calendar";
+$l['rpgcalendar_cal_name']            = "Name";
+$l['rpgcalendar_cal_color']           = "Default colour";
+$l['rpgcalendar_cal_color_desc']      = "Fallback colour shown until a member picks their own for this calendar.";
+$l['rpgcalendar_cal_joinable']        = "Joinable";
+$l['rpgcalendar_cal_joinable_desc']   = "If yes, members can self-subscribe to this calendar and add events; only subscribers see it. If no, it is a public calendar visible to everyone (team writes).";
+$l['rpgcalendar_calendar_saved']      = "The calendar has been saved.";
+$l['rpgcalendar_calendar_deleted']    = "The calendar has been deleted; its events moved to the Forum calendar.";
+$l['rpgcalendar_error_calendar_name'] = "Please enter a calendar name.";
 
 // Event list
 $l['rpgcalendar_th_date']      = "Date";
@@ -41,6 +52,8 @@ $l['rpgcalendar_field_end']          = "End date";
 $l['rpgcalendar_field_end_desc']     = "Only used for multi-day events. Must not be before the start date.";
 $l['rpgcalendar_field_repeat']       = "Repeat";
 $l['rpgcalendar_field_repeat_desc']  = "Monthly repeats skip months without the start day (e.g. the 31st in February); yearly repeats on Feb 29 skip non-leap years.";
+$l['rpgcalendar_field_interval']      = "Repeat interval";
+$l['rpgcalendar_field_interval_desc'] = "Repeat every N units of the type above, e.g. 2 = every 2 weeks / months / years. 1 = every time.";
 $l['rpgcalendar_field_repeat_until'] = "Repeat until";
 $l['rpgcalendar_field_repeat_until_desc'] = "Optional last repeat date (day / month / year). Leave 0 to repeat forever.";
 $l['rpgcalendar_field_important']    = "Important event";

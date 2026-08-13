@@ -65,6 +65,10 @@ function plotcp_rpgcalendar_collect(array &$args): void
         'end'       => ['y' => 1247, 'm' => 4, 'd' => 2],   // >= start; single day: = start
         'important' => true,                      // shows up in the month event table
         'badge'     => 'plot',                    // CSS class rpgcalendar_event--plot
+        // Optional (v1.x sub-calendars): assign the event to a virtual
+        // sub-calendar so users can colour/hide it. 'cal-*' is reserved.
+        'calendar_key'  => 'plotcat-' . $category_id,
+        'default_color' => '#a855f7',             // #rrggbb; user pref overrides it
     ];
 }
 ```
@@ -72,6 +76,14 @@ function plotcp_rpgcalendar_collect(array &$args): void
 Contract guarantees: hook fires exactly once per month render; events outside the requested
 month are ignored (providers may over-deliver); escaping is done by rpgcalendar at render
 time; malformed entries are silently discarded (a broken provider must never break the page).
+
+Virtual sub-calendars: a provider may expose calendars (e.g. one per plot category) so they
+appear on the "My calendars" page (per-user colour + show/hide). rpgcalendar fires
+`rpgcalendar_collect_calendars` (`['calendars' => []]`); each entry is
+`['key' => 'plotcat-5', 'name' => 'Plots', 'default_color' => '#a855f7']` (keys must not start
+with the reserved `cal-`). Events reference the same key via `calendar_key`. rpgcalendar's own
+birthdays are the built-in virtual calendar `birthdays`.
+
 There is also an optional output hook `rpgcalendar_monthview_end`
 (`['year','month','output' => &$html]`) below the event table.
 
