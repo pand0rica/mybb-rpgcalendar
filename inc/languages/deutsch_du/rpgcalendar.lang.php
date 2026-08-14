@@ -24,6 +24,24 @@ $l['rpgcalendar_source_extended'] = "Ereignis";
 $l['rpgcalendar_source_native']   = "Forentermin";
 $l['rpgcalendar_source_plot']     = "Plot";
 $l['rpgcalendar_source_ics']      = "Extern";
+$l['rpgcalendar_source_weather']  = "Wetter";
+$l['rpgcalendar_source_holiday']  = "Feiertag";
+
+// Wetter- & Feiertagskalender (v1.2) – auch die Kalendernamen unter "Meine Kalender"
+$l['rpgcalendar_cal_weather'] = "Wetter";
+$l['rpgcalendar_cal_holiday'] = "Feiertage";
+
+// Hinweis bei fehlenden Daten (fiktive Orte)
+$l['rpgcalendar_hint_title'] = "Fehlende Kalenderdaten";
+$l['rpgcalendar_hint_line']  = "Für {1} liegen für {2} noch keine {3} vor – das Team muss sie manuell anlegen.";
+
+// Wetter-Bezeichnungen (Text-Fallback, wenn kein Bild vorhanden ist)
+$l['rpgcalendar_wcond_clear']   = "Klar";
+$l['rpgcalendar_wcond_cloudy']  = "Bewölkt";
+$l['rpgcalendar_wcond_fog']     = "Nebel";
+$l['rpgcalendar_wcond_rain']    = "Regen";
+$l['rpgcalendar_wcond_snow']    = "Schnee";
+$l['rpgcalendar_wcond_thunder'] = "Gewitter";
 
 $l['rpgcalendar_month_1']  = "Januar";
 $l['rpgcalendar_month_2']  = "Februar";

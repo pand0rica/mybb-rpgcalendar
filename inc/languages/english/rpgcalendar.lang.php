@@ -24,6 +24,24 @@ $l['rpgcalendar_source_extended'] = "Event";
 $l['rpgcalendar_source_native']   = "Forum event";
 $l['rpgcalendar_source_plot']     = "Plot";
 $l['rpgcalendar_source_ics']      = "External";
+$l['rpgcalendar_source_weather']  = "Weather";
+$l['rpgcalendar_source_holiday']  = "Holiday";
+
+// Weather & holiday calendars (v1.2) – also the calendar names on "My calendars"
+$l['rpgcalendar_cal_weather'] = "Weather";
+$l['rpgcalendar_cal_holiday'] = "Holidays";
+
+// Missing-data hint for fictional locations
+$l['rpgcalendar_hint_title'] = "Missing calendar data";
+$l['rpgcalendar_hint_line']  = "No {3} for {1} in {2} yet – the team needs to add it manually.";
+
+// Weather condition labels (text fallback when no image exists)
+$l['rpgcalendar_wcond_clear']   = "Clear";
+$l['rpgcalendar_wcond_cloudy']  = "Cloudy";
+$l['rpgcalendar_wcond_fog']     = "Fog";
+$l['rpgcalendar_wcond_rain']    = "Rain";
+$l['rpgcalendar_wcond_snow']    = "Snow";
+$l['rpgcalendar_wcond_thunder'] = "Thunderstorm";
 
 $l['rpgcalendar_month_1']  = "January";
 $l['rpgcalendar_month_2']  = "February";

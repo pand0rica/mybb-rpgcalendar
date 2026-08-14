@@ -757,4 +757,339 @@ class Rpgcalendar_Database
 
         return $rows;
     }
+
+    // -------------------------------------------------------------------
+    // Locations (Spielorte)
+    // -------------------------------------------------------------------
+
+    /** @return array[] */
+    public function listLocations(bool $visible_only = false): array
+    {
+        $where = $visible_only ? 'visible = 1' : '1=1';
+        $query = $this->db->simple_select(
+            'rpgcalendar_locations', '*', $where,
+            ['order_by' => 'disporder, name', 'order_dir' => 'ASC']
+        );
+
+        $rows = [];
+        while ($row = $this->db->fetch_array($query)) {
+            $rows[] = $row;
+        }
+
+        return $rows;
+    }
+
+    public function getLocation(int $locid): ?array
+    {
+        $row = $this->db->fetch_array($this->db->simple_select(
+            'rpgcalendar_locations', '*', 'locid = ' . (int)$locid
+        ));
+
+        return $row ?: null;
+    }
+
+    /**
+     * Inserts or updates a location. With $partial only the supplied keys are
+     * written (used by the generator to backfill coordinates).
+     */
+    public function saveLocation(array $data, int $locid = 0, bool $partial = false): int
+    {
+        $row = [];
+        $map = [
+            'name'      => 'string',
+            'type'      => 'int',
+            'country'   => 'string',
+            'city'      => 'string',
+            'lat'       => 'float',
+            'lon'       => 'float',
+            'disporder' => 'int',
+            'visible'   => 'int',
+        ];
+        foreach ($map as $key => $type) {
+            if (!array_key_exists($key, $data)) {
+                continue;
+            }
+            if ($type === 'int') {
+                $row[$key] = (int)$data[$key];
+            } elseif ($type === 'float') {
+                $row[$key] = (float)$data[$key];
+            } else {
+                $row[$key] = $this->db->escape_string((string)$data[$key]);
+            }
+        }
+
+        if ($locid > 0) {
+            if ($row) {
+                $this->db->update_query('rpgcalendar_locations', $row, 'locid = ' . (int)$locid);
+            }
+
+            return $locid;
+        }
+
+        $row['dateline'] = TIME_NOW;
+
+        return (int)$this->db->insert_query('rpgcalendar_locations', $row);
+    }
+
+    /** Deletes a location and its weather/holidays; clears its calendar prefs. */
+    public function deleteLocation(int $locid): void
+    {
+        $locid = (int)$locid;
+        $this->db->delete_query('rpgcalendar_locations', 'locid = ' . $locid);
+        $this->db->delete_query('rpgcalendar_weather', 'locid = ' . $locid);
+        $this->db->delete_query('rpgcalendar_holidays', 'locid = ' . $locid);
+        $this->db->delete_query('rpgcalendar_calendar_prefs',
+            "calendar_key = 'weather-" . $locid . "' OR calendar_key = 'holiday-" . $locid . "'");
+    }
+
+    // -------------------------------------------------------------------
+    // Weather sub-calendar
+    // -------------------------------------------------------------------
+
+    /**
+     * Visible weather rows that can overlap the key range, limited to the given
+     * location ids. One-time rows by interval overlap, yearly rows by start.
+     *
+     * @param int[] $locids
+     * @return array[]
+     */
+    public function getWeatherForMonthView(int $month_start_key, int $month_end_key, array $locids): array
+    {
+        $ids = $this->intListOrEmpty($locids);
+        if ($ids === '') {
+            return [];
+        }
+
+        $query = $this->db->query("
+            SELECT *
+            FROM " . TABLE_PREFIX . "rpgcalendar_weather
+            WHERE visible = 1
+              AND locid IN ({$ids})
+              AND (
+                    (yearly = 0 AND start_key <= {$month_end_key} AND end_key >= {$month_start_key})
+                 OR (yearly = 1 AND start_key <= {$month_end_key})
+              )
+        ");
+
+        $rows = [];
+        while ($row = $this->db->fetch_array($query)) {
+            $rows[] = $row;
+        }
+
+        return $rows;
+    }
+
+    public function getWeather(int $wid): ?array
+    {
+        $row = $this->db->fetch_array($this->db->simple_select(
+            'rpgcalendar_weather', '*', 'wid = ' . (int)$wid
+        ));
+
+        return $row ?: null;
+    }
+
+    public function saveWeather(array $data, int $wid = 0): int
+    {
+        $row = [
+            'locid'       => (int)$data['locid'],
+            'source'      => $this->db->escape_string((string)($data['source'] ?? 'manual')),
+            'wcondition'  => $this->db->escape_string((string)($data['wcondition'] ?? '')),
+            'start_year'  => (int)$data['start_year'],
+            'start_month' => (int)$data['start_month'],
+            'start_day'   => (int)$data['start_day'],
+            'end_year'    => (int)$data['end_year'],
+            'end_month'   => (int)$data['end_month'],
+            'end_day'     => (int)$data['end_day'],
+            'start_key'   => Rpgcalendar_Engine::dateKey((int)$data['start_year'], (int)$data['start_month'], (int)$data['start_day']),
+            'end_key'     => Rpgcalendar_Engine::dateKey((int)$data['end_year'], (int)$data['end_month'], (int)$data['end_day']),
+            'yearly'      => empty($data['yearly']) ? 0 : 1,
+            'note'        => $this->db->escape_string((string)($data['note'] ?? '')),
+            'visible'     => empty($data['visible']) ? 0 : 1,
+        ];
+
+        if ($wid > 0) {
+            $this->db->update_query('rpgcalendar_weather', $row, 'wid = ' . (int)$wid);
+
+            return $wid;
+        }
+
+        $row['dateline'] = TIME_NOW;
+
+        return (int)$this->db->insert_query('rpgcalendar_weather', $row);
+    }
+
+    public function deleteWeather(int $wid): void
+    {
+        $this->db->delete_query('rpgcalendar_weather', 'wid = ' . (int)$wid);
+    }
+
+    public function deleteAutoWeatherInRange(int $locid, int $from_key, int $to_key): void
+    {
+        $this->db->delete_query('rpgcalendar_weather',
+            "source = 'auto' AND locid = " . (int)$locid
+            . ' AND start_key >= ' . (int)$from_key . ' AND start_key <= ' . (int)$to_key);
+    }
+
+    public function countWeather(int $locid = 0): int
+    {
+        $where = ($locid !== 0) ? 'locid = ' . (int)$locid : '1=1';
+        $row = $this->db->fetch_array($this->db->simple_select(
+            'rpgcalendar_weather', 'COUNT(*) AS num', $where
+        ));
+
+        return isset($row['num']) ? (int)$row['num'] : 0;
+    }
+
+    /** @return array[] */
+    public function listWeather(int $locid = 0, int $offset = 0, int $perpage = 30): array
+    {
+        $where = ($locid !== 0) ? 'locid = ' . (int)$locid : '1=1';
+        $query = $this->db->simple_select(
+            'rpgcalendar_weather', '*', $where,
+            [
+                'order_by'    => 'start_key',
+                'order_dir'   => 'DESC',
+                'limit_start' => max(0, (int)$offset),
+                'limit'       => max(1, (int)$perpage),
+            ]
+        );
+
+        $rows = [];
+        while ($row = $this->db->fetch_array($query)) {
+            $rows[] = $row;
+        }
+
+        return $rows;
+    }
+
+    // -------------------------------------------------------------------
+    // Holidays sub-calendar
+    // -------------------------------------------------------------------
+
+    /**
+     * @param int[] $locids
+     * @return array[]
+     */
+    public function getHolidayForMonthView(int $month_start_key, int $month_end_key, array $locids): array
+    {
+        $ids = $this->intListOrEmpty($locids);
+        if ($ids === '') {
+            return [];
+        }
+
+        $query = $this->db->query("
+            SELECT *
+            FROM " . TABLE_PREFIX . "rpgcalendar_holidays
+            WHERE visible = 1
+              AND locid IN ({$ids})
+              AND (
+                    (yearly = 0 AND start_key <= {$month_end_key} AND end_key >= {$month_start_key})
+                 OR (yearly = 1 AND start_key <= {$month_end_key})
+              )
+        ");
+
+        $rows = [];
+        while ($row = $this->db->fetch_array($query)) {
+            $rows[] = $row;
+        }
+
+        return $rows;
+    }
+
+    public function getHoliday(int $hid): ?array
+    {
+        $row = $this->db->fetch_array($this->db->simple_select(
+            'rpgcalendar_holidays', '*', 'hid = ' . (int)$hid
+        ));
+
+        return $row ?: null;
+    }
+
+    public function saveHoliday(array $data, int $hid = 0): int
+    {
+        $row = [
+            'locid'       => (int)$data['locid'],
+            'source'      => $this->db->escape_string((string)($data['source'] ?? 'manual')),
+            'title'       => $this->db->escape_string((string)$data['title']),
+            'description' => $this->db->escape_string((string)($data['description'] ?? '')),
+            'start_year'  => (int)$data['start_year'],
+            'start_month' => (int)$data['start_month'],
+            'start_day'   => (int)$data['start_day'],
+            'end_year'    => (int)$data['end_year'],
+            'end_month'   => (int)$data['end_month'],
+            'end_day'     => (int)$data['end_day'],
+            'start_key'   => Rpgcalendar_Engine::dateKey((int)$data['start_year'], (int)$data['start_month'], (int)$data['start_day']),
+            'end_key'     => Rpgcalendar_Engine::dateKey((int)$data['end_year'], (int)$data['end_month'], (int)$data['end_day']),
+            'yearly'      => empty($data['yearly']) ? 0 : 1,
+            'visible'     => empty($data['visible']) ? 0 : 1,
+        ];
+
+        if ($hid > 0) {
+            $this->db->update_query('rpgcalendar_holidays', $row, 'hid = ' . (int)$hid);
+
+            return $hid;
+        }
+
+        $row['dateline'] = TIME_NOW;
+
+        return (int)$this->db->insert_query('rpgcalendar_holidays', $row);
+    }
+
+    public function deleteHoliday(int $hid): void
+    {
+        $this->db->delete_query('rpgcalendar_holidays', 'hid = ' . (int)$hid);
+    }
+
+    public function deleteAutoHolidayInRange(int $locid, int $from_key, int $to_key): void
+    {
+        $this->db->delete_query('rpgcalendar_holidays',
+            "source = 'auto' AND locid = " . (int)$locid
+            . ' AND start_key >= ' . (int)$from_key . ' AND start_key <= ' . (int)$to_key);
+    }
+
+    public function countHolidays(int $locid = 0): int
+    {
+        $where = ($locid !== 0) ? 'locid = ' . (int)$locid : '1=1';
+        $row = $this->db->fetch_array($this->db->simple_select(
+            'rpgcalendar_holidays', 'COUNT(*) AS num', $where
+        ));
+
+        return isset($row['num']) ? (int)$row['num'] : 0;
+    }
+
+    /** @return array[] */
+    public function listHolidays(int $locid = 0, int $offset = 0, int $perpage = 30): array
+    {
+        $where = ($locid !== 0) ? 'locid = ' . (int)$locid : '1=1';
+        $query = $this->db->simple_select(
+            'rpgcalendar_holidays', '*', $where,
+            [
+                'order_by'    => 'start_key',
+                'order_dir'   => 'DESC',
+                'limit_start' => max(0, (int)$offset),
+                'limit'       => max(1, (int)$perpage),
+            ]
+        );
+
+        $rows = [];
+        while ($row = $this->db->fetch_array($query)) {
+            $rows[] = $row;
+        }
+
+        return $rows;
+    }
+
+    /** "1,2,3" from an int list, or '' if the list is empty/invalid. */
+    private function intListOrEmpty(array $ids): string
+    {
+        $clean = [];
+        foreach ($ids as $id) {
+            $id = (int)$id;
+            if ($id > 0) {
+                $clean[$id] = $id;
+            }
+        }
+
+        return $clean ? implode(',', $clean) : '';
+    }
 }

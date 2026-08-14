@@ -21,7 +21,8 @@ $templatelist = 'rpgcalendar,rpgcalendar_nav,rpgcalendar_nav_link,rpgcalendar_we
     . 'rpgcalendar_calendars,rpgcalendar_calendar_row,rpgcalendar_calendar_addform,rpgcalendar_calendar_delete,'
     . 'rpgcalendar_calendar_share,rpgcalendar_calendar_leave,rpgcalendar_calendar_invites,rpgcalendar_calendar_invite_row,'
     . 'rpgcalendar_calendar_joinable,rpgcalendar_calendar_joinable_row,'
-    . 'rpgcalendar_share,rpgcalendar_share_member,rpgcalendar_share_empty,rpgcalendar_autocomplete';
+    . 'rpgcalendar_share,rpgcalendar_share_member,rpgcalendar_share_empty,rpgcalendar_autocomplete,'
+    . 'rpgcalendar_hint';
 
 require_once './global.php';
 
@@ -40,6 +41,72 @@ if ($allowed_groups !== '' && $allowed_groups !== '-1' && !is_member($allowed_gr
 require_once MYBB_ROOT . 'inc/plugins/rpgcalendar/core/engine.php';
 require_once MYBB_ROOT . 'inc/plugins/rpgcalendar/core/database.php';
 require_once MYBB_ROOT . 'inc/plugins/rpgcalendar/core/native_adapter.php';
+
+/** Localized label for a weather condition slug (falls back to the raw slug). */
+function rpgcalendar_weather_label(string $slug): string
+{
+    global $lang;
+
+    $key = 'rpgcalendar_wcond_' . preg_replace('/[^a-z0-9_]/', '', $slug);
+
+    return (isset($lang->$key) && $lang->$key !== '') ? $lang->$key : $slug;
+}
+
+/**
+ * Symbol markup for a weather condition: an <img> from the configured image
+ * directory if a matching file exists, otherwise an empty string (the caller
+ * then shows the text label). Result cached per slug. Includes a trailing space.
+ */
+function rpgcalendar_weather_symbol(string $slug, string $label): string
+{
+    global $mybb;
+    static $cache = [];
+
+    $slug = preg_replace('/[^a-z0-9_-]/', '', strtolower($slug));
+    if ($slug === '') {
+        return '';
+    }
+    if (!isset($cache[$slug])) {
+        $dir = isset($mybb->settings['rpgcalendar_weather_imagedir'])
+            ? trim((string)$mybb->settings['rpgcalendar_weather_imagedir']) : '';
+        $dir = trim($dir, '/');
+        $cache[$slug] = '';
+        if ($dir !== '') {
+            foreach (['png', 'gif', 'jpg', 'jpeg', 'svg', 'webp'] as $ext) {
+                if (file_exists(MYBB_ROOT . $dir . '/' . $slug . '.' . $ext)) {
+                    $src = htmlspecialchars_uni($mybb->settings['bburl'] . '/' . $dir . '/' . $slug . '.' . $ext);
+                    $cache[$slug] = '<img src="' . $src . '" alt="%ALT%" title="%ALT%" class="rpgcalendar_wicon" /> ';
+                    break;
+                }
+            }
+        }
+    }
+
+    return $cache[$slug] === '' ? '' : str_replace('%ALT%', htmlspecialchars_uni($label), $cache[$slug]);
+}
+
+/** Markup for the single global holiday symbol (image URL or emoji/text). */
+function rpgcalendar_holiday_symbol(): string
+{
+    global $mybb;
+    static $cache = null;
+
+    if ($cache !== null) {
+        return $cache;
+    }
+
+    $sym = isset($mybb->settings['rpgcalendar_holiday_symbol'])
+        ? trim((string)$mybb->settings['rpgcalendar_holiday_symbol']) : '';
+    if ($sym === '') {
+        $cache = '';
+    } elseif (strpos($sym, '/') !== false || preg_match('/\.(png|gif|jpe?g|svg|webp)$/i', $sym)) {
+        $cache = '<img src="' . htmlspecialchars_uni($sym) . '" alt="" class="rpgcalendar_wicon" /> ';
+    } else {
+        $cache = htmlspecialchars_uni($sym) . ' ';
+    }
+
+    return $cache;
+}
 
 add_breadcrumb($lang->rpgcalendar_title, 'rpgcalendar.php');
 
@@ -318,6 +385,14 @@ if ($rpgcalendar_action === 'day') {
         $row_type   = isset($lang->$source_key) ? htmlspecialchars_uni($lang->$source_key) : htmlspecialchars_uni($event['source']);
 
         $title_text = $rpgcalendar_html_titles ? $event['title'] : htmlspecialchars_uni($event['title']);
+        if (($event['source'] ?? '') === 'weather') {
+            $wlabel = rpgcalendar_weather_label((string)$event['condition']);
+            $wnote  = (string)($event['note'] ?? '');
+            $title_text = rpgcalendar_weather_symbol((string)$event['condition'], $wlabel)
+                . htmlspecialchars_uni(trim($wlabel . ($wnote !== '' ? ', ' . $wnote : '')));
+        } elseif (($event['source'] ?? '') === 'holiday') {
+            $title_text = rpgcalendar_holiday_symbol() . $title_text;
+        }
         // Detail link: native events, extended events (set by the engine) and
         // providers all carry a raw-'&' url which we escape exactly once here.
         $detail_url = (string)$event['url'];
@@ -1234,6 +1309,31 @@ if (is_array($month_data['monthtext']) && trim($month_data['monthtext']['content
 }
 
 // ---------------------------------------------------------------------
+// Missing-data hint for fictional locations (team must add data by hand)
+// ---------------------------------------------------------------------
+$rpgcalendar_hint = '';
+if (!empty($month_data['hints']) && (int)($mybb->settings['rpgcalendar_weather_hint'] ?? 0) === 1) {
+    $hint_items = '';
+    foreach ($month_data['hints'] as $h) {
+        $kinds = [];
+        if (!empty($h['weather'])) {
+            $kinds[] = $lang->rpgcalendar_cal_weather;
+        }
+        if (!empty($h['holiday'])) {
+            $kinds[] = $lang->rpgcalendar_cal_holiday;
+        }
+        $line = $lang->sprintf(
+            $lang->rpgcalendar_hint_line,
+            htmlspecialchars_uni($h['name']),
+            htmlspecialchars_uni($rpgcalendar_monthtitle),
+            htmlspecialchars_uni(implode(' & ', $kinds))
+        );
+        $hint_items .= '<li>' . $line . '</li>';
+    }
+    eval('$rpgcalendar_hint = "' . $templates->get('rpgcalendar_hint') . '";');
+}
+
+// ---------------------------------------------------------------------
 // Weekday header (rotated by start of week)
 // ---------------------------------------------------------------------
 $weekdayheader = '';
@@ -1289,6 +1389,31 @@ foreach ($month_data['grid'] as $week) {
                 ? $event['title']
                 : htmlspecialchars_uni($event['title']);
             $event_title_attr = htmlspecialchars_uni(strip_tags($event['title']));
+
+            // Weather/holiday chips carry a symbol (image or emoji) before the
+            // text and build their own tooltip (location + condition).
+            $event_symbol = '';
+            $event_source = $event['source'] ?? '';
+            if ($event_source === 'weather') {
+                $wlabel = rpgcalendar_weather_label((string)$event['condition']);
+                $wnote  = (string)($event['note'] ?? '');
+                $event_symbol = rpgcalendar_weather_symbol((string)$event['condition'], $wlabel);
+                $visible_text = ($wnote !== '') ? $wnote : (($event_symbol === '') ? $wlabel : '');
+                $event_title  = htmlspecialchars_uni($visible_text);
+                $tip = $wlabel . ($wnote !== '' ? ', ' . $wnote : '');
+                if (($event['locname'] ?? '') !== '') {
+                    $tip = $event['locname'] . ': ' . $tip;
+                }
+                $event_title_attr = htmlspecialchars_uni($tip);
+            } elseif ($event_source === 'holiday') {
+                $event_symbol = rpgcalendar_holiday_symbol();
+                $tip = (string)$event['title'];
+                if (($event['locname'] ?? '') !== '') {
+                    $tip = $event['locname'] . ': ' . $tip;
+                }
+                $event_title_attr = htmlspecialchars_uni($tip);
+            }
+
             if ($event['url'] !== '') {
                 $event_url = htmlspecialchars_uni($event['url']);
                 eval('$day_events .= "' . $templates->get('rpgcalendar_eventbit') . '";');

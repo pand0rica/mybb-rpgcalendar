@@ -26,6 +26,7 @@ $mybb->user += ['uid' => 0, 'timezone' => $mybb->settings['timezoneoffset'] ?? 0
 
 require_once MYBB_ROOT . 'inc/plugins/rpgcalendar/core/engine.php';
 require_once MYBB_ROOT . 'inc/plugins/rpgcalendar/core/database.php';
+require_once MYBB_ROOT . 'inc/plugins/rpgcalendar/core/generator.php';
 
 $pass = 0;
 $fail = 0;
@@ -48,6 +49,10 @@ function check(string $name, $expected, $actual): void
 class Rpgcalendar_TestDatabase
 {
     public $rows = [];
+    public $weather = [];
+    public $holidays = [];
+    public $locations = [];
+    public $prefs = [];
 
     public function getEventsForMonthView(int $s, int $e, int $u): array
     {
@@ -57,6 +62,39 @@ class Rpgcalendar_TestDatabase
     public function getMonthText(int $y, int $m): ?array
     {
         return null;
+    }
+
+    public function getCalendarColors(): array
+    {
+        return [];
+    }
+
+    public function getUserPrefs(int $uid): array
+    {
+        return $this->prefs;
+    }
+
+    public function listLocations(bool $visible_only = false): array
+    {
+        return $this->locations;
+    }
+
+    public function getWeatherForMonthView(int $s, int $e, array $locids): array
+    {
+        return self::filterByLocid($this->weather, $locids);
+    }
+
+    public function getHolidayForMonthView(int $s, int $e, array $locids): array
+    {
+        return self::filterByLocid($this->holidays, $locids);
+    }
+
+    /** Mirrors the real "WHERE locid IN (...)" (empty list => nothing). */
+    private static function filterByLocid(array $rows, array $locids): array
+    {
+        return array_values(array_filter($rows, function (array $r) use ($locids) {
+            return in_array((int)$r['locid'], $locids, true);
+        }));
     }
 }
 
@@ -70,6 +108,7 @@ function make_row(int $eid, int $sy, int $sm, int $sd, int $ey, int $em, int $ed
         'end_key'   => Rpgcalendar_Engine::dateKey($ey, $em, $ed),
         'repeat_type' => $repeat, 'repeat_until_key' => $until_key,
         'important' => 1, 'visible' => 1, 'source' => 'manual', 'private' => 0, 'uid' => 0,
+        'calendar_id' => 0,
     ];
 }
 
@@ -94,13 +133,62 @@ function days_with_event(array $data, string $id): array
     return $days;
 }
 
-function month_data(array $rows, int $year, int $month): array
+function month_data(array $rows, int $year, int $month, array $extra = []): array
 {
     $db = new Rpgcalendar_TestDatabase();
-    $db->rows = $rows;
+    $db->rows      = $rows;
+    $db->weather   = $extra['weather']   ?? [];
+    $db->holidays  = $extra['holidays']  ?? [];
+    $db->locations = $extra['locations'] ?? [];
+    $db->prefs     = $extra['prefs']     ?? [];
     $engine = new Rpgcalendar_Engine($db, null);
 
     return $engine->getMonthData($year, $month, 1, 0);
+}
+
+/** Sources of the events on a given day of the month, in render order. */
+function sources_on_day(array $data, int $day): array
+{
+    foreach ($data['grid'] as $week) {
+        foreach ($week as $cell) {
+            if ($cell !== null && (int)$cell['day'] === $day) {
+                return array_map(function (array $ev) {
+                    return $ev['source'] ?? '';
+                }, $cell['events']);
+            }
+        }
+    }
+
+    return [];
+}
+
+function make_weather(int $wid, int $locid, int $y, int $m, int $d, string $cond = 'clear', int $yearly = 0): array
+{
+    return [
+        'wid' => $wid, 'locid' => $locid, 'source' => 'auto', 'wcondition' => $cond,
+        'start_year' => $y, 'start_month' => $m, 'start_day' => $d,
+        'end_year' => $y, 'end_month' => $m, 'end_day' => $d,
+        'start_key' => Rpgcalendar_Engine::dateKey($y, $m, $d),
+        'end_key'   => Rpgcalendar_Engine::dateKey($y, $m, $d),
+        'yearly' => $yearly, 'note' => '', 'visible' => 1,
+    ];
+}
+
+function make_holiday(int $hid, int $locid, int $y, int $m, int $d, int $yearly = 0): array
+{
+    return [
+        'hid' => $hid, 'locid' => $locid, 'source' => 'auto', 'title' => 'H' . $hid, 'description' => '',
+        'start_year' => $y, 'start_month' => $m, 'start_day' => $d,
+        'end_year' => $y, 'end_month' => $m, 'end_day' => $d,
+        'start_key' => Rpgcalendar_Engine::dateKey($y, $m, $d),
+        'end_key'   => Rpgcalendar_Engine::dateKey($y, $m, $d),
+        'yearly' => $yearly, 'visible' => 1,
+    ];
+}
+
+function make_location(int $locid, int $type = 0): array
+{
+    return ['locid' => $locid, 'name' => 'L' . $locid, 'type' => $type, 'visible' => 1];
 }
 
 echo "== Calendar math ==\n";
@@ -196,6 +284,65 @@ $row = make_row(8, 1247, 3, 12, 1247, 3, 12);
 $data = month_data([$row], 1247, 3);
 check('important table holds the event', 1, count($data['important']));
 check('important table entry id', 'ext-8', $data['important'][0]['id']);
+
+// The helper may over-deliver (a look-back window); the caller filters by month
+// overlap. So test the contract, not exact sets.
+echo "== Dated occurrence helper ==\n";
+check('non-yearly => single occurrence', [Rpgcalendar_Engine::dayNumber(1247, 3, 12)],
+    Rpgcalendar_Engine::datedOccurrenceStarts(1247, 3, 12, 0, false, 1247));
+check('yearly includes the view-year occurrence', true,
+    in_array(Rpgcalendar_Engine::dayNumber(1247, 3, 12),
+        Rpgcalendar_Engine::datedOccurrenceStarts(1200, 3, 12, 0, true, 1247), true));
+$feb29_starts = Rpgcalendar_Engine::datedOccurrenceStarts(2024, 2, 29, 0, true, 2025);
+$feb29_in_2025 = false;
+foreach ($feb29_starts as $n) {
+    if (Rpgcalendar_Engine::fromDayNumber($n)['y'] === 2025) {
+        $feb29_in_2025 = true;
+    }
+}
+check('yearly Feb-29 has no occurrence in non-leap 2025', false, $feb29_in_2025);
+
+echo "== Weather code mapping ==\n";
+foreach ([[0, 'clear'], [2, 'cloudy'], [48, 'fog'], [61, 'rain'], [80, 'rain'], [73, 'snow'], [86, 'snow'], [95, 'thunder']] as $t) {
+    check('WMO ' . $t[0] . ' => ' . $t[1], $t[1], Rpgcalendar_Generator::weatherSlug($t[0]));
+}
+
+echo "== Weather / holiday placement ==\n";
+$extra = [
+    'locations' => [make_location(1, 0)],
+    'weather'   => [make_weather(1, 1, 1247, 3, 12, 'rain')],
+    'holidays'  => [make_holiday(1, 1, 1247, 3, 12)],
+];
+$data = month_data([], 1247, 3, $extra);
+$srcs = sources_on_day($data, 12);
+check('weather and holiday present on day 12', true, in_array('weather', $srcs, true) && in_array('holiday', $srcs, true));
+check('weather is ordered above holiday on the same day', true,
+    array_search('weather', $srcs, true) < array_search('holiday', $srcs, true));
+check('holiday is important, weather is not', 1, count($data['important']));
+check('no hint when a fictional location has data', [], $data['hints']);
+
+check('fictional location without data yields a hint', 1,
+    count(month_data([], 1247, 3, ['locations' => [make_location(2, 0)]])['hints']));
+check('real location without data yields no hint', [],
+    month_data([], 1247, 3, ['locations' => [make_location(3, 1)]])['hints']);
+
+// Visibility via per-user calendar prefs (calendar_key visible=0 hides it)
+$hidden = month_data([], 1247, 3, [
+    'locations' => [make_location(1, 0)],
+    'weather'   => [make_weather(1, 1, 1247, 3, 12)],
+    'holidays'  => [make_holiday(1, 1, 1247, 3, 12)],
+    'prefs'     => [
+        'weather-1' => ['color' => '', 'visible' => 0],
+        'holiday-1' => ['color' => '', 'visible' => 0],
+    ],
+]);
+check('hidden weather/holiday calendars are not placed', [], sources_on_day($hidden, 12));
+
+check('yearly weather recurs in later years', ['weather'],
+    sources_on_day(month_data([], 1248, 12, [
+        'locations' => [make_location(1, 0)],
+        'weather'   => [make_weather(1, 1, 1247, 12, 25, 'snow', 1)],
+    ]), 25));
 
 echo "== Provider sanitizing ==\n";
 $valid = Rpgcalendar_Engine::sanitizeProvidedEvent([

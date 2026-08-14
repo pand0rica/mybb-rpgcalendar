@@ -126,6 +126,67 @@ class Rpgcalendar_Installer
             PRIMARY KEY (`fid`),
             KEY `uid` (`uid`)
         ) ENGINE=InnoDB{$collation};");
+
+        // v1.2 – play locations with per-location weather/holiday sub-calendars.
+        // Each location exposes two virtual calendars 'weather-{locid}' and
+        // 'holiday-{locid}' handled by the existing calendar_prefs visibility/colour.
+        $db->query("CREATE TABLE IF NOT EXISTS `" . TABLE_PREFIX . "rpgcalendar_locations` (
+            `locid`     INT UNSIGNED NOT NULL AUTO_INCREMENT,
+            `name`      VARCHAR(120) NOT NULL DEFAULT '',
+            `type`      TINYINT(1) NOT NULL DEFAULT 0,
+            `country`   VARCHAR(2) NOT NULL DEFAULT '',
+            `city`      VARCHAR(120) NOT NULL DEFAULT '',
+            `lat`       DECIMAL(8,4) NOT NULL DEFAULT 0,
+            `lon`       DECIMAL(8,4) NOT NULL DEFAULT 0,
+            `disporder` INT UNSIGNED NOT NULL DEFAULT 0,
+            `visible`   TINYINT(1) NOT NULL DEFAULT 1,
+            `dateline`  INT UNSIGNED NOT NULL DEFAULT 0,
+            PRIMARY KEY (`locid`)
+        ) ENGINE=InnoDB{$collation};");
+
+        $db->query("CREATE TABLE IF NOT EXISTS `" . TABLE_PREFIX . "rpgcalendar_weather` (
+            `wid`         INT UNSIGNED NOT NULL AUTO_INCREMENT,
+            `locid`       INT UNSIGNED NOT NULL DEFAULT 0,
+            `source`      VARCHAR(10) NOT NULL DEFAULT 'manual',
+            `wcondition`  VARCHAR(40) NOT NULL DEFAULT '',
+            `start_year`  SMALLINT NOT NULL DEFAULT 0,
+            `start_month` TINYINT UNSIGNED NOT NULL DEFAULT 1,
+            `start_day`   TINYINT UNSIGNED NOT NULL DEFAULT 1,
+            `end_year`    SMALLINT NOT NULL DEFAULT 0,
+            `end_month`   TINYINT UNSIGNED NOT NULL DEFAULT 1,
+            `end_day`     TINYINT UNSIGNED NOT NULL DEFAULT 1,
+            `start_key`   INT NOT NULL DEFAULT 0,
+            `end_key`     INT NOT NULL DEFAULT 0,
+            `yearly`      TINYINT(1) NOT NULL DEFAULT 0,
+            `note`        VARCHAR(255) NOT NULL DEFAULT '',
+            `visible`     TINYINT(1) NOT NULL DEFAULT 1,
+            `dateline`    INT UNSIGNED NOT NULL DEFAULT 0,
+            PRIMARY KEY (`wid`),
+            KEY `overlap` (`end_key`, `start_key`),
+            KEY `loc` (`locid`)
+        ) ENGINE=InnoDB{$collation};");
+
+        $db->query("CREATE TABLE IF NOT EXISTS `" . TABLE_PREFIX . "rpgcalendar_holidays` (
+            `hid`         INT UNSIGNED NOT NULL AUTO_INCREMENT,
+            `locid`       INT UNSIGNED NOT NULL DEFAULT 0,
+            `source`      VARCHAR(10) NOT NULL DEFAULT 'manual',
+            `title`       VARCHAR(200) NOT NULL DEFAULT '',
+            `description` VARCHAR(255) NOT NULL DEFAULT '',
+            `start_year`  SMALLINT NOT NULL DEFAULT 0,
+            `start_month` TINYINT UNSIGNED NOT NULL DEFAULT 1,
+            `start_day`   TINYINT UNSIGNED NOT NULL DEFAULT 1,
+            `end_year`    SMALLINT NOT NULL DEFAULT 0,
+            `end_month`   TINYINT UNSIGNED NOT NULL DEFAULT 1,
+            `end_day`     TINYINT UNSIGNED NOT NULL DEFAULT 1,
+            `start_key`   INT NOT NULL DEFAULT 0,
+            `end_key`     INT NOT NULL DEFAULT 0,
+            `yearly`      TINYINT(1) NOT NULL DEFAULT 0,
+            `visible`     TINYINT(1) NOT NULL DEFAULT 1,
+            `dateline`    INT UNSIGNED NOT NULL DEFAULT 0,
+            PRIMARY KEY (`hid`),
+            KEY `overlap` (`end_key`, `start_key`),
+            KEY `loc` (`locid`)
+        ) ENGINE=InnoDB{$collation};");
     }
 
     /**
@@ -254,6 +315,9 @@ class Rpgcalendar_Installer
         $db->drop_table('rpgcalendar_calendar_prefs');
         $db->drop_table('rpgcalendar_calendar_members');
         $db->drop_table('rpgcalendar_feeds');
+        $db->drop_table('rpgcalendar_locations');
+        $db->drop_table('rpgcalendar_weather');
+        $db->drop_table('rpgcalendar_holidays');
     }
 
     /**
@@ -352,6 +416,26 @@ class Rpgcalendar_Installer
                     . 'calendars this allows those users to inject markup. Tooltips, the page title '
                     . 'and the breadcrumb always stay plain text.',
                 'onoff', '0',
+            ],
+            'weather_imagedir' => [
+                'Weather image directory',
+                'Board-relative URL path to the folder with weather condition images. The plugin looks for a file named after the condition slug (clear, cloudy, fog, rain, snow, thunder) with a .png/.gif/.jpg/.svg extension. Falls back to the condition text if no image is found.',
+                'text', 'images/rpgcalendar/weather',
+            ],
+            'holiday_symbol' => [
+                'Holiday symbol',
+                'One symbol shown in front of every holiday. Either an emoji/short text or an image URL (a value containing a slash or ending in .png/.gif/.jpg/.svg is rendered as an image).',
+                'text', '',
+            ],
+            'weather_hint' => [
+                'Show missing-data hint',
+                'Show a hint for fictional locations that have no weather/holiday data for the displayed month, asking the team to add it manually.',
+                'onoff', '1',
+            ],
+            'monthtext_location' => [
+                'Month text default location',
+                'Location (locid) used to pre-fill the month text from weather/holidays in the ACP. 0 = the first location.',
+                'numeric', '0',
             ],
         ];
     }

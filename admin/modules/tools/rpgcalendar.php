@@ -14,6 +14,7 @@ $lang->load('rpgcalendar');
 
 require_once MYBB_ROOT . 'inc/plugins/rpgcalendar/core/engine.php';
 require_once MYBB_ROOT . 'inc/plugins/rpgcalendar/core/database.php';
+require_once MYBB_ROOT . 'inc/plugins/rpgcalendar/core/generator.php';
 
 $page->add_breadcrumb_item($lang->rpgcalendar, 'index.php?module=tools-rpgcalendar');
 
@@ -53,13 +54,40 @@ function rpgcalendar_acp_tabs(string $active): void
             'link'        => 'index.php?module=tools-rpgcalendar&amp;action=calendars',
             'description' => $lang->rpgcalendar_tab_desc_calendars,
         ],
+        'locations' => [
+            'title'       => $lang->rpgcalendar_tab_locations,
+            'link'        => 'index.php?module=tools-rpgcalendar&amp;action=locations',
+            'description' => $lang->rpgcalendar_tab_desc_locations,
+        ],
+        'weather' => [
+            'title'       => $lang->rpgcalendar_tab_weather,
+            'link'        => 'index.php?module=tools-rpgcalendar&amp;action=weather',
+            'description' => $lang->rpgcalendar_tab_desc_weather,
+        ],
+        'holidays' => [
+            'title'       => $lang->rpgcalendar_tab_holidays,
+            'link'        => 'index.php?module=tools-rpgcalendar&amp;action=holidays',
+            'description' => $lang->rpgcalendar_tab_desc_holidays,
+        ],
     ];
 
-    if ($active === 'edit_event') {
-        $tabs['edit_event'] = [
-            'title'       => $lang->rpgcalendar_tab_edit_event,
+    $edit_tabs = [
+        'edit_event'    => 'rpgcalendar_tab_edit_event',
+        'add_location'  => 'rpgcalendar_tab_add_location',
+        'edit_location' => 'rpgcalendar_tab_edit_location',
+        'add_weather'   => 'rpgcalendar_tab_add_weather',
+        'edit_weather'  => 'rpgcalendar_tab_edit_weather',
+        'add_holiday'   => 'rpgcalendar_tab_add_holiday',
+        'edit_holiday'  => 'rpgcalendar_tab_edit_holiday',
+    ];
+    if (isset($edit_tabs[$active])) {
+        $desc_key = ($active === 'edit_event')
+            ? 'rpgcalendar_tab_desc_edit_event'
+            : $edit_tabs[$active] . '_desc';
+        $tabs[$active] = [
+            'title'       => $lang->{$edit_tabs[$active]},
             'link'        => '#',
-            'description' => $lang->rpgcalendar_tab_desc_edit_event,
+            'description' => $lang->{$desc_key},
         ];
     }
 
@@ -329,6 +357,311 @@ function rpgcalendar_acp_event_defaults(): array
 }
 
 // ---------------------------------------------------------------------
+// Locations / weather / holidays helpers
+// ---------------------------------------------------------------------
+
+/** @return array locid => name (0 => dash when $with_empty). */
+function rpgcalendar_acp_location_options(Rpgcalendar_Database $db, bool $with_empty = false, bool $real_only = false): array
+{
+    $options = [];
+    if ($with_empty) {
+        $options[0] = '—';
+    }
+    foreach ($db->listLocations() as $loc) {
+        if ($real_only && (int)$loc['type'] !== 1) {
+            continue;
+        }
+        $options[(int)$loc['locid']] = $loc['name'];
+    }
+
+    return $options;
+}
+
+/** Reads/validates the location form. @return array [data, errors] */
+function rpgcalendar_acp_read_location_input(): array
+{
+    global $mybb, $lang;
+
+    $errors = [];
+    $data = [
+        'name'      => trim($mybb->get_input('name')),
+        'type'      => ($mybb->get_input('type', MyBB::INPUT_INT) === 1) ? 1 : 0,
+        'country'   => strtoupper(preg_replace('/[^A-Za-z]/', '', $mybb->get_input('country'))),
+        'city'      => trim($mybb->get_input('city')),
+        'lat'       => (float)$mybb->get_input('lat'),
+        'lon'       => (float)$mybb->get_input('lon'),
+        'disporder' => $mybb->get_input('disporder', MyBB::INPUT_INT),
+        'visible'   => $mybb->get_input('visible', MyBB::INPUT_INT),
+    ];
+    if (strlen($data['country']) > 2) {
+        $data['country'] = substr($data['country'], 0, 2);
+    }
+    if ($data['name'] === '') {
+        $errors[] = $lang->rpgcalendar_error_invalid_name;
+    }
+    if ($data['type'] === 1) {
+        if (strlen($data['country']) !== 2) {
+            $errors[] = $lang->rpgcalendar_error_country;
+        }
+        if ($data['city'] === '' && $data['lat'] == 0.0 && $data['lon'] == 0.0) {
+            $errors[] = $lang->rpgcalendar_error_city_or_coords;
+        }
+    }
+
+    return [$data, $errors];
+}
+
+/** Shared date reader for weather/holiday forms. @return array [data, errors] */
+function rpgcalendar_acp_read_dated_input(): array
+{
+    global $mybb, $lang;
+
+    $errors = [];
+    list($min_year, $max_year) = rpgcalendar_acp_year_bounds();
+
+    $d = [
+        'start_year'  => $mybb->get_input('start_year', MyBB::INPUT_INT),
+        'start_month' => $mybb->get_input('start_month', MyBB::INPUT_INT),
+        'start_day'   => $mybb->get_input('start_day', MyBB::INPUT_INT),
+        'yearly'      => ($mybb->get_input('yearly', MyBB::INPUT_INT) === 1) ? 1 : 0,
+        'visible'     => $mybb->get_input('visible', MyBB::INPUT_INT),
+    ];
+
+    if ($d['start_month'] < 1 || $d['start_month'] > 12
+        || $d['start_day'] < 1
+        || $d['start_day'] > Rpgcalendar_Engine::daysInMonth($d['start_year'], $d['start_month'])
+    ) {
+        $errors[] = $lang->rpgcalendar_error_invalid_date;
+    }
+    if ($d['start_year'] < $min_year || $d['start_year'] > $max_year) {
+        $errors[] = $lang->rpgcalendar_error_year_range;
+    }
+
+    if ($mybb->get_input('multiday', MyBB::INPUT_INT) === 1) {
+        $d['end_year']  = $mybb->get_input('end_year', MyBB::INPUT_INT);
+        $d['end_month'] = $mybb->get_input('end_month', MyBB::INPUT_INT);
+        $d['end_day']   = $mybb->get_input('end_day', MyBB::INPUT_INT);
+        if ($d['end_month'] < 1 || $d['end_month'] > 12
+            || $d['end_day'] < 1
+            || $d['end_day'] > Rpgcalendar_Engine::daysInMonth($d['end_year'], $d['end_month'])
+        ) {
+            $errors[] = $lang->rpgcalendar_error_invalid_date;
+        } elseif (Rpgcalendar_Engine::dateKey($d['end_year'], $d['end_month'], $d['end_day'])
+            < Rpgcalendar_Engine::dateKey($d['start_year'], $d['start_month'], $d['start_day'])
+        ) {
+            $errors[] = $lang->rpgcalendar_error_end_before_start;
+        }
+    } else {
+        $d['end_year']  = $d['start_year'];
+        $d['end_month'] = $d['start_month'];
+        $d['end_day']   = $d['start_day'];
+    }
+
+    return [$d, $errors];
+}
+
+/** Default date part for weather/holiday add forms (today, single day). */
+function rpgcalendar_acp_dated_defaults(): array
+{
+    return [
+        'start_year'  => (int)my_date('Y'), 'start_month' => (int)my_date('n'), 'start_day' => (int)my_date('j'),
+        'end_year'    => (int)my_date('Y'), 'end_month'   => (int)my_date('n'), 'end_day'   => (int)my_date('j'),
+        'start_key'   => 0, 'end_key' => 0, 'yearly' => 0, 'visible' => 1,
+    ];
+}
+
+/** Multi-day checkbox + end-date rows, shared by weather/holiday forms. */
+function rpgcalendar_acp_dated_rows(FormContainer $fc, Form $form, array $values): void
+{
+    global $lang;
+
+    $fc->output_row(
+        $lang->rpgcalendar_field_start . ' <em>*</em>',
+        $lang->rpgcalendar_field_start_desc,
+        rpgcalendar_acp_date_inputs($form, 'start', (int)$values['start_day'], (int)$values['start_month'], (int)$values['start_year']),
+        'start_day'
+    );
+    $multiday = ((int)$values['start_key'] !== (int)$values['end_key']) ? 1 : 0;
+    $fc->output_row(
+        $lang->rpgcalendar_field_multiday,
+        '',
+        $form->generate_check_box('multiday', 1, $lang->rpgcalendar_field_multiday, ['checked' => $multiday, 'id' => 'multiday']),
+        'multiday'
+    );
+    $fc->output_row(
+        $lang->rpgcalendar_field_end,
+        $lang->rpgcalendar_field_end_desc,
+        rpgcalendar_acp_date_inputs($form, 'end', (int)$values['end_day'], (int)$values['end_month'], (int)$values['end_year']),
+        'end_day'
+    );
+    $fc->output_row(
+        $lang->rpgcalendar_field_yearly,
+        $lang->rpgcalendar_field_yearly_desc,
+        $form->generate_yes_no_radio('yearly', (int)$values['yearly']),
+        'yearly'
+    );
+    $fc->output_row(
+        $lang->rpgcalendar_field_visible,
+        $lang->rpgcalendar_field_visible_desc,
+        $form->generate_yes_no_radio('visible', (int)$values['visible']),
+        'visible'
+    );
+}
+
+/** Renders the location add/edit form. */
+function rpgcalendar_acp_location_form(array $values, array $errors, string $form_action, string $tab): void
+{
+    global $page, $lang;
+
+    $page->output_header($lang->rpgcalendar);
+    rpgcalendar_acp_tabs($tab);
+    if ($errors) {
+        $page->output_inline_error($errors);
+    }
+
+    $form = new Form('index.php?module=tools-rpgcalendar&amp;action=' . $form_action, 'post');
+    if (!empty($values['locid'])) {
+        echo $form->generate_hidden_field('locid', (int)$values['locid']);
+    }
+
+    $fc = new FormContainer(($tab === 'edit_location') ? $lang->rpgcalendar_tab_edit_location : $lang->rpgcalendar_tab_add_location);
+    $fc->output_row(
+        $lang->rpgcalendar_field_locname . ' <em>*</em>',
+        $lang->rpgcalendar_field_locname_desc,
+        $form->generate_text_box('name', $values['name'], ['id' => 'name']),
+        'name'
+    );
+    $fc->output_row(
+        $lang->rpgcalendar_field_loctype,
+        $lang->rpgcalendar_field_loctype_desc,
+        $form->generate_select_box('type', [0 => $lang->rpgcalendar_loctype_fictional, 1 => $lang->rpgcalendar_loctype_real], [(int)$values['type']], ['id' => 'type']),
+        'type'
+    );
+    $fc->output_row(
+        $lang->rpgcalendar_field_country,
+        $lang->rpgcalendar_field_country_desc,
+        $form->generate_text_box('country', $values['country'], ['id' => 'country', 'style' => 'width: 60px']),
+        'country'
+    );
+    $fc->output_row(
+        $lang->rpgcalendar_field_city,
+        $lang->rpgcalendar_field_city_desc,
+        $form->generate_text_box('city', $values['city'], ['id' => 'city']),
+        'city'
+    );
+    $fc->output_row(
+        $lang->rpgcalendar_field_coords,
+        $lang->rpgcalendar_field_coords_desc,
+        $form->generate_text_box('lat', $values['lat'], ['id' => 'lat', 'style' => 'width: 90px'])
+        . ' ' . $form->generate_text_box('lon', $values['lon'], ['id' => 'lon', 'style' => 'width: 90px']),
+        'lat'
+    );
+    $fc->output_row(
+        $lang->rpgcalendar_field_disporder,
+        '',
+        $form->generate_numeric_field('disporder', (int)$values['disporder'], ['id' => 'disporder', 'style' => 'width: 70px']),
+        'disporder'
+    );
+    $fc->output_row(
+        $lang->rpgcalendar_field_visible,
+        $lang->rpgcalendar_field_visible_desc,
+        $form->generate_yes_no_radio('visible', (int)$values['visible']),
+        'visible'
+    );
+    $fc->end();
+    $form->output_submit_wrapper([$form->generate_submit_button($lang->rpgcalendar_save)]);
+    $form->end();
+
+    $page->output_footer();
+}
+
+/** Renders the weather add/edit form. */
+function rpgcalendar_acp_weather_form(Rpgcalendar_Database $db, array $values, array $errors, string $form_action, string $tab): void
+{
+    global $page, $lang;
+
+    $page->output_header($lang->rpgcalendar);
+    rpgcalendar_acp_tabs($tab);
+    if ($errors) {
+        $page->output_inline_error($errors);
+    }
+
+    $form = new Form('index.php?module=tools-rpgcalendar&amp;action=' . $form_action, 'post');
+    if (!empty($values['wid'])) {
+        echo $form->generate_hidden_field('wid', (int)$values['wid']);
+    }
+
+    $fc = new FormContainer(($tab === 'edit_weather') ? $lang->rpgcalendar_tab_edit_weather : $lang->rpgcalendar_tab_add_weather);
+    $fc->output_row(
+        $lang->rpgcalendar_field_location . ' <em>*</em>',
+        $lang->rpgcalendar_field_location_desc,
+        $form->generate_select_box('locid', rpgcalendar_acp_location_options($db), [(int)$values['locid']], ['id' => 'locid']),
+        'locid'
+    );
+    $fc->output_row(
+        $lang->rpgcalendar_field_condition . ' <em>*</em>',
+        $lang->rpgcalendar_field_condition_desc,
+        $form->generate_text_box('wcondition', $values['wcondition'], ['id' => 'wcondition']),
+        'wcondition'
+    );
+    rpgcalendar_acp_dated_rows($fc, $form, $values);
+    $fc->output_row(
+        $lang->rpgcalendar_field_note,
+        $lang->rpgcalendar_field_note_desc,
+        $form->generate_text_box('note', $values['note'], ['id' => 'note']),
+        'note'
+    );
+    $fc->end();
+    $form->output_submit_wrapper([$form->generate_submit_button($lang->rpgcalendar_save)]);
+    $form->end();
+
+    $page->output_footer();
+}
+
+/** Renders the holiday add/edit form. */
+function rpgcalendar_acp_holiday_form(Rpgcalendar_Database $db, array $values, array $errors, string $form_action, string $tab): void
+{
+    global $page, $lang;
+
+    $page->output_header($lang->rpgcalendar);
+    rpgcalendar_acp_tabs($tab);
+    if ($errors) {
+        $page->output_inline_error($errors);
+    }
+
+    $form = new Form('index.php?module=tools-rpgcalendar&amp;action=' . $form_action, 'post');
+    if (!empty($values['hid'])) {
+        echo $form->generate_hidden_field('hid', (int)$values['hid']);
+    }
+
+    $fc = new FormContainer(($tab === 'edit_holiday') ? $lang->rpgcalendar_tab_edit_holiday : $lang->rpgcalendar_tab_add_holiday);
+    $fc->output_row(
+        $lang->rpgcalendar_field_location . ' <em>*</em>',
+        $lang->rpgcalendar_field_location_desc,
+        $form->generate_select_box('locid', rpgcalendar_acp_location_options($db), [(int)$values['locid']], ['id' => 'locid']),
+        'locid'
+    );
+    $fc->output_row(
+        $lang->rpgcalendar_field_title . ' <em>*</em>',
+        $lang->rpgcalendar_field_title_desc,
+        $form->generate_text_box('title', $values['title'], ['id' => 'title']),
+        'title'
+    );
+    $fc->output_row(
+        $lang->rpgcalendar_field_description,
+        $lang->rpgcalendar_field_description_desc,
+        $form->generate_text_box('description', $values['description'], ['id' => 'description']),
+        'description'
+    );
+    rpgcalendar_acp_dated_rows($fc, $form, $values);
+    $fc->end();
+    $form->output_submit_wrapper([$form->generate_submit_button($lang->rpgcalendar_save)]);
+    $form->end();
+
+    $page->output_footer();
+}
+
+// ---------------------------------------------------------------------
 // POST actions
 // ---------------------------------------------------------------------
 
@@ -454,6 +787,224 @@ if ($action === 'delete_calendar' && $mybb->request_method === 'post') {
     admin_redirect('index.php?module=tools-rpgcalendar&action=calendars');
 }
 
+// --- Locations ---
+
+if ($action === 'do_add_location' || $action === 'do_edit_location') {
+    $locid = ($action === 'do_edit_location') ? $mybb->get_input('locid', MyBB::INPUT_INT) : 0;
+    if ($action === 'do_edit_location' && !$rpgcalendar_db->getLocation($locid)) {
+        flash_message($lang->rpgcalendar_error_not_found, 'error');
+        admin_redirect('index.php?module=tools-rpgcalendar&action=locations');
+    }
+
+    list($data, $errors) = rpgcalendar_acp_read_location_input();
+    if ($errors) {
+        $values = array_merge(['locid' => $locid], $data);
+        rpgcalendar_acp_location_form(
+            $values,
+            $errors,
+            ($locid > 0) ? 'do_edit_location' : 'do_add_location',
+            ($locid > 0) ? 'edit_location' : 'add_location'
+        );
+        exit;
+    }
+
+    $rpgcalendar_db->saveLocation($data, $locid);
+    flash_message($lang->rpgcalendar_saved, 'success');
+    admin_redirect('index.php?module=tools-rpgcalendar&action=locations');
+}
+
+if ($action === 'delete_location' && $mybb->request_method === 'post') {
+    $locid = $mybb->get_input('locid', MyBB::INPUT_INT);
+    if (!$rpgcalendar_db->getLocation($locid)) {
+        flash_message($lang->rpgcalendar_error_not_found, 'error');
+    } else {
+        $rpgcalendar_db->deleteLocation($locid);
+        flash_message($lang->rpgcalendar_deleted, 'success');
+    }
+    admin_redirect('index.php?module=tools-rpgcalendar&action=locations');
+}
+
+if ($action === 'do_generate' && $mybb->request_method === 'post') {
+    list($min_year, $max_year) = rpgcalendar_acp_year_bounds();
+    $locid     = $mybb->get_input('locid', MyBB::INPUT_INT);
+    $from_year = $mybb->get_input('from_year', MyBB::INPUT_INT);
+    $to_year   = $mybb->get_input('to_year', MyBB::INPUT_INT);
+    $location  = $rpgcalendar_db->getLocation($locid);
+
+    if (!$location || (int)$location['type'] !== 1) {
+        flash_message($lang->rpgcalendar_error_not_real, 'error');
+        admin_redirect('index.php?module=tools-rpgcalendar&action=locations');
+    }
+    if ($from_year < $min_year || $to_year > $max_year || $from_year > $to_year) {
+        flash_message($lang->rpgcalendar_error_year_range, 'error');
+        admin_redirect('index.php?module=tools-rpgcalendar&action=locations');
+    }
+
+    $from_key  = Rpgcalendar_Engine::dateKey($from_year, 1, 1);
+    $to_key    = Rpgcalendar_Engine::dateKey($to_year, 12, 31);
+    $generator = new Rpgcalendar_Generator($rpgcalendar_db);
+    $result    = $generator->generateForLocation($locid, $from_key, $to_key);
+
+    if ($result['weather'] === 0 && $result['holidays'] === 0) {
+        flash_message($lang->sprintf($lang->rpgcalendar_generate_failed, implode(', ', $result['errors'])), 'error');
+    } else {
+        flash_message($lang->sprintf($lang->rpgcalendar_generate_done, $result['weather'], $result['holidays']), 'success');
+    }
+    admin_redirect('index.php?module=tools-rpgcalendar&action=locations');
+}
+
+// --- Weather ---
+
+if ($action === 'do_add_weather' || $action === 'do_edit_weather') {
+    $wid = ($action === 'do_edit_weather') ? $mybb->get_input('wid', MyBB::INPUT_INT) : 0;
+    $existing = ($wid > 0) ? $rpgcalendar_db->getWeather($wid) : null;
+    if ($action === 'do_edit_weather' && !$existing) {
+        flash_message($lang->rpgcalendar_error_not_found, 'error');
+        admin_redirect('index.php?module=tools-rpgcalendar&action=weather');
+    }
+
+    list($dates, $errors) = rpgcalendar_acp_read_dated_input();
+    $data = array_merge($dates, [
+        'locid'      => $mybb->get_input('locid', MyBB::INPUT_INT),
+        'wcondition' => trim($mybb->get_input('wcondition')),
+        'note'       => trim($mybb->get_input('note')),
+        // Editing an auto row turns it into a manual one so a re-generate keeps it.
+        'source'     => 'manual',
+    ]);
+    if ($data['locid'] <= 0 || !$rpgcalendar_db->getLocation($data['locid'])) {
+        $errors[] = $lang->rpgcalendar_error_location;
+    }
+    if ($data['wcondition'] === '') {
+        $errors[] = $lang->rpgcalendar_error_condition;
+    }
+
+    if ($errors) {
+        $values = array_merge(rpgcalendar_acp_dated_defaults(), $data, [
+            'wid'       => $wid,
+            'start_key' => Rpgcalendar_Engine::dateKey((int)$data['start_year'], (int)$data['start_month'], (int)$data['start_day']),
+            'end_key'   => Rpgcalendar_Engine::dateKey((int)$data['end_year'], (int)$data['end_month'], (int)$data['end_day']),
+        ]);
+        rpgcalendar_acp_weather_form($rpgcalendar_db, $values, $errors, ($wid > 0) ? 'do_edit_weather' : 'do_add_weather', ($wid > 0) ? 'edit_weather' : 'add_weather');
+        exit;
+    }
+
+    $rpgcalendar_db->saveWeather($data, $wid);
+    flash_message($lang->rpgcalendar_saved, 'success');
+    admin_redirect('index.php?module=tools-rpgcalendar&action=weather');
+}
+
+if ($action === 'delete_weather' && $mybb->request_method === 'post') {
+    $wid = $mybb->get_input('wid', MyBB::INPUT_INT);
+    if (!$rpgcalendar_db->getWeather($wid)) {
+        flash_message($lang->rpgcalendar_error_not_found, 'error');
+    } else {
+        $rpgcalendar_db->deleteWeather($wid);
+        flash_message($lang->rpgcalendar_deleted, 'success');
+    }
+    admin_redirect('index.php?module=tools-rpgcalendar&action=weather');
+}
+
+// --- Holidays ---
+
+if ($action === 'do_add_holiday' || $action === 'do_edit_holiday') {
+    $hid = ($action === 'do_edit_holiday') ? $mybb->get_input('hid', MyBB::INPUT_INT) : 0;
+    $existing = ($hid > 0) ? $rpgcalendar_db->getHoliday($hid) : null;
+    if ($action === 'do_edit_holiday' && !$existing) {
+        flash_message($lang->rpgcalendar_error_not_found, 'error');
+        admin_redirect('index.php?module=tools-rpgcalendar&action=holidays');
+    }
+
+    list($dates, $errors) = rpgcalendar_acp_read_dated_input();
+    $data = array_merge($dates, [
+        'locid'       => $mybb->get_input('locid', MyBB::INPUT_INT),
+        'title'       => trim($mybb->get_input('title')),
+        'description' => trim($mybb->get_input('description')),
+        'source'      => 'manual',
+    ]);
+    if ($data['locid'] <= 0 || !$rpgcalendar_db->getLocation($data['locid'])) {
+        $errors[] = $lang->rpgcalendar_error_location;
+    }
+    if ($data['title'] === '') {
+        $errors[] = $lang->rpgcalendar_error_invalid_title;
+    } elseif (my_strlen($data['title']) > 200) {
+        $data['title'] = my_substr($data['title'], 0, 200);
+    }
+
+    if ($errors) {
+        $values = array_merge(rpgcalendar_acp_dated_defaults(), $data, [
+            'hid'       => $hid,
+            'start_key' => Rpgcalendar_Engine::dateKey((int)$data['start_year'], (int)$data['start_month'], (int)$data['start_day']),
+            'end_key'   => Rpgcalendar_Engine::dateKey((int)$data['end_year'], (int)$data['end_month'], (int)$data['end_day']),
+        ]);
+        rpgcalendar_acp_holiday_form($rpgcalendar_db, $values, $errors, ($hid > 0) ? 'do_edit_holiday' : 'do_add_holiday', ($hid > 0) ? 'edit_holiday' : 'add_holiday');
+        exit;
+    }
+
+    $rpgcalendar_db->saveHoliday($data, $hid);
+    flash_message($lang->rpgcalendar_saved, 'success');
+    admin_redirect('index.php?module=tools-rpgcalendar&action=holidays');
+}
+
+if ($action === 'delete_holiday' && $mybb->request_method === 'post') {
+    $hid = $mybb->get_input('hid', MyBB::INPUT_INT);
+    if (!$rpgcalendar_db->getHoliday($hid)) {
+        flash_message($lang->rpgcalendar_error_not_found, 'error');
+    } else {
+        $rpgcalendar_db->deleteHoliday($hid);
+        flash_message($lang->rpgcalendar_deleted, 'success');
+    }
+    admin_redirect('index.php?module=tools-rpgcalendar&action=holidays');
+}
+
+/** Builds a suggested month text from a location's weather + holidays. */
+function rpgcalendar_acp_build_monthtext(Rpgcalendar_Database $db, int $locid, int $year, int $month): string
+{
+    global $lang;
+
+    if ($locid <= 0 || $month < 1 || $month > 12) {
+        return '';
+    }
+    $days = Rpgcalendar_Engine::daysInMonth($year, $month);
+    if ($days < 1) {
+        return '';
+    }
+    $start_key = Rpgcalendar_Engine::dateKey($year, $month, 1);
+    $end_key   = Rpgcalendar_Engine::dateKey($year, $month, $days);
+
+    $lines = [];
+
+    $weather = $db->getWeatherForMonthView($start_key, $end_key, [$locid]);
+    if ($weather) {
+        $counts = [];
+        foreach ($weather as $w) {
+            $slug = (string)$w['wcondition'];
+            $counts[$slug] = ($counts[$slug] ?? 0) + 1;
+        }
+        arsort($counts);
+        $parts = [];
+        foreach ($counts as $slug => $n) {
+            $key   = 'rpgcalendar_wcond_' . preg_replace('/[^a-z0-9_]/', '', $slug);
+            $label = (isset($lang->$key) && $lang->$key !== '') ? $lang->$key : $slug;
+            $parts[] = $label . ' (' . (int)$n . ')';
+        }
+        $lines[] = $lang->rpgcalendar_monthtext_weather_prefix . ' ' . implode(', ', $parts);
+    }
+
+    $holidays = $db->getHolidayForMonthView($start_key, $end_key, [$locid]);
+    if ($holidays) {
+        usort($holidays, function (array $a, array $b): int {
+            return (int)$a['start_key'] <=> (int)$b['start_key'];
+        });
+        $parts = [];
+        foreach ($holidays as $h) {
+            $parts[] = (int)$h['start_day'] . '.' . (int)$h['start_month'] . '. ' . $h['title'];
+        }
+        $lines[] = $lang->rpgcalendar_monthtext_holiday_prefix . ' ' . implode(', ', $parts);
+    }
+
+    return implode("\n", $lines);
+}
+
 // ---------------------------------------------------------------------
 // Views
 // ---------------------------------------------------------------------
@@ -545,7 +1096,7 @@ if ($action === 'calendars') {
     exit;
 }
 
-if ($action === 'monthtexts') {
+if ($action === 'monthtexts' || $action === 'prefill_monthtext') {
     $page->output_header($lang->rpgcalendar);
     rpgcalendar_acp_tabs('monthtexts');
 
@@ -596,15 +1147,53 @@ if ($action === 'monthtexts') {
     }
     $table->output($lang->rpgcalendar_tab_monthtexts);
 
-    // Add/edit form (prefilled when ?mtid= given)
-    $form_year    = $edit_row ? (int)$edit_row['year'] : (int)my_date('Y');
-    $form_month   = $edit_row ? (int)$edit_row['month'] : (int)my_date('n');
-    $form_content = $edit_row ? $edit_row['content'] : '';
-
     list($min_year, $max_year) = rpgcalendar_acp_year_bounds();
     $months = [];
     for ($m = 1; $m <= 12; $m++) {
         $months[$m] = $lang->{'rpgcalendar_month_' . $m};
+    }
+
+    // Default form values (prefilled when ?mtid= given)
+    $form_year    = $edit_row ? (int)$edit_row['year'] : (int)my_date('Y');
+    $form_month   = $edit_row ? (int)$edit_row['month'] : (int)my_date('n');
+    $form_content = $edit_row ? $edit_row['content'] : '';
+
+    // Pre-fill request: generate the content from a location's weather/holidays.
+    $prefill_locid = $mybb->get_input('prefill_locid', MyBB::INPUT_INT);
+    if ($prefill_locid <= 0) {
+        $prefill_locid = (int)($mybb->settings['rpgcalendar_monthtext_location'] ?? 0);
+    }
+    if ($action === 'prefill_monthtext') {
+        $form_year  = $mybb->get_input('year', MyBB::INPUT_INT);
+        $form_month = $mybb->get_input('month', MyBB::INPUT_INT);
+        if ($form_month < 1 || $form_month > 12) {
+            $form_month = (int)my_date('n');
+        }
+        $generated = rpgcalendar_acp_build_monthtext($rpgcalendar_db, $prefill_locid, $form_year, $form_month);
+        if ($generated !== '') {
+            $form_content = $generated;
+            echo '<div class="notice">' . $lang->rpgcalendar_monthtext_prefilled . '</div>';
+        } else {
+            echo '<div class="notice">' . $lang->rpgcalendar_monthtext_prefill_empty . '</div>';
+        }
+    }
+
+    // Pre-fill helper form (choose location, month, year -> suggest content).
+    $loc_options = rpgcalendar_acp_location_options($rpgcalendar_db);
+    if ($loc_options) {
+        $pf  = new Form('index.php?module=tools-rpgcalendar&amp;action=prefill_monthtext', 'post');
+        $pfc = new FormContainer($lang->rpgcalendar_monthtext_prefill);
+        $pfc->output_row(
+            $lang->rpgcalendar_field_location,
+            $lang->rpgcalendar_monthtext_prefill_desc,
+            $pf->generate_select_box('prefill_locid', $loc_options, [$prefill_locid], ['id' => 'prefill_locid'])
+            . ' ' . $pf->generate_select_box('month', $months, [$form_month])
+            . ' ' . $pf->generate_numeric_field('year', $form_year, ['min' => $min_year, 'max' => $max_year, 'style' => 'width: 90px']),
+            'prefill_locid'
+        );
+        $pfc->end();
+        $pf->output_submit_wrapper([$pf->generate_submit_button($lang->rpgcalendar_monthtext_prefill_btn)]);
+        $pf->end();
     }
 
     $form = new Form('index.php?module=tools-rpgcalendar&amp;action=do_monthtext', 'post');
@@ -625,6 +1214,296 @@ if ($action === 'monthtexts') {
     $form_container->end();
     $form->output_submit_wrapper([$form->generate_submit_button($lang->rpgcalendar_save_monthtext)]);
     $form->end();
+
+    $page->output_footer();
+    exit;
+}
+
+// --- Location views ---
+
+if ($action === 'add_location') {
+    rpgcalendar_acp_location_form([
+        'locid' => 0, 'name' => '', 'type' => 0, 'country' => '', 'city' => '',
+        'lat' => 0, 'lon' => 0, 'disporder' => 0, 'visible' => 1,
+    ], [], 'do_add_location', 'add_location');
+    exit;
+}
+
+if ($action === 'edit_location') {
+    $locid = $mybb->get_input('locid', MyBB::INPUT_INT);
+    $location = $rpgcalendar_db->getLocation($locid);
+    if (!$location) {
+        flash_message($lang->rpgcalendar_error_not_found, 'error');
+        admin_redirect('index.php?module=tools-rpgcalendar&action=locations');
+    }
+    rpgcalendar_acp_location_form($location, [], 'do_edit_location', 'edit_location');
+    exit;
+}
+
+if ($action === 'locations') {
+    $page->output_header($lang->rpgcalendar);
+    rpgcalendar_acp_tabs('locations');
+
+    echo '<p><a href="index.php?module=tools-rpgcalendar&amp;action=add_location">&#43; '
+        . $lang->rpgcalendar_tab_add_location . '</a></p>';
+
+    $table = new Table();
+    $table->construct_header($lang->rpgcalendar_th_locname);
+    $table->construct_header($lang->rpgcalendar_th_type, ['width' => '12%']);
+    $table->construct_header($lang->rpgcalendar_th_place, ['width' => '25%']);
+    $table->construct_header($lang->rpgcalendar_th_visible, ['width' => '8%', 'class' => 'align_center']);
+    $table->construct_header($lang->rpgcalendar_th_controls, ['width' => '20%', 'class' => 'align_center']);
+
+    $locations = $rpgcalendar_db->listLocations();
+    foreach ($locations as $loc) {
+        $locid = (int)$loc['locid'];
+        $delete_form = '<form action="index.php" method="post" style="display:inline">'
+            . '<input type="hidden" name="module" value="tools-rpgcalendar" />'
+            . '<input type="hidden" name="action" value="delete_location" />'
+            . '<input type="hidden" name="locid" value="' . $locid . '" />'
+            . '<input type="hidden" name="my_post_key" value="' . $mybb->post_code . '" />'
+            . '<input type="submit" class="submit_button" value="' . $lang->rpgcalendar_delete
+            . '" onclick="return confirm(\'' . $lang->rpgcalendar_confirm_delete_location . '\');" />'
+            . '</form>';
+
+        $place = ((int)$loc['type'] === 1)
+            ? trim(htmlspecialchars_uni($loc['city']) . ' (' . htmlspecialchars_uni($loc['country']) . ')', ' ')
+            : '&ndash;';
+
+        $table->construct_cell(htmlspecialchars_uni($loc['name']));
+        $table->construct_cell(((int)$loc['type'] === 1) ? $lang->rpgcalendar_loctype_real : $lang->rpgcalendar_loctype_fictional);
+        $table->construct_cell($place);
+        $table->construct_cell(((int)$loc['visible'] === 1) ? $lang->yes : $lang->no, ['class' => 'align_center']);
+        $table->construct_cell(
+            '<a href="index.php?module=tools-rpgcalendar&amp;action=edit_location&amp;locid=' . $locid . '">'
+            . $lang->rpgcalendar_edit . '</a> &nbsp; ' . $delete_form,
+            ['class' => 'align_center']
+        );
+        $table->construct_row();
+    }
+    if (!$locations) {
+        $table->construct_cell($lang->rpgcalendar_no_locations, ['colspan' => 5, 'class' => 'align_center']);
+        $table->construct_row();
+    }
+    $table->output($lang->rpgcalendar_tab_locations);
+
+    // Generate form for real locations (weather + holidays from real sources).
+    $real_options = rpgcalendar_acp_location_options($rpgcalendar_db, false, true);
+    if ($real_options) {
+        list($min_year, $max_year) = rpgcalendar_acp_year_bounds();
+        $cur = (int)my_date('Y');
+        $cur = max($min_year, min($max_year, $cur));
+
+        $gform = new Form('index.php?module=tools-rpgcalendar&amp;action=do_generate', 'post');
+        $gc = new FormContainer($lang->rpgcalendar_generate_title);
+        $gc->output_row(
+            $lang->rpgcalendar_field_location,
+            $lang->rpgcalendar_generate_desc,
+            $gform->generate_select_box('locid', $real_options, [0], ['id' => 'gen_locid'])
+            . ' ' . $gform->generate_numeric_field('from_year', $cur, ['min' => $min_year, 'max' => $max_year, 'style' => 'width: 90px'])
+            . ' &ndash; ' . $gform->generate_numeric_field('to_year', $cur, ['min' => $min_year, 'max' => $max_year, 'style' => 'width: 90px']),
+            'gen_locid'
+        );
+        $gc->end();
+        $gform->output_submit_wrapper([$gform->generate_submit_button($lang->rpgcalendar_generate_btn)]);
+        $gform->end();
+    }
+
+    $page->output_footer();
+    exit;
+}
+
+// --- Weather views ---
+
+if ($action === 'add_weather') {
+    rpgcalendar_acp_weather_form($rpgcalendar_db, array_merge(rpgcalendar_acp_dated_defaults(), [
+        'wid' => 0, 'locid' => 0, 'wcondition' => '', 'note' => '',
+    ]), [], 'do_add_weather', 'add_weather');
+    exit;
+}
+
+if ($action === 'edit_weather') {
+    $wid = $mybb->get_input('wid', MyBB::INPUT_INT);
+    $row = $rpgcalendar_db->getWeather($wid);
+    if (!$row) {
+        flash_message($lang->rpgcalendar_error_not_found, 'error');
+        admin_redirect('index.php?module=tools-rpgcalendar&action=weather');
+    }
+    rpgcalendar_acp_weather_form($rpgcalendar_db, $row, [], 'do_edit_weather', 'edit_weather');
+    exit;
+}
+
+if ($action === 'weather') {
+    $page->output_header($lang->rpgcalendar);
+    rpgcalendar_acp_tabs('weather');
+
+    echo '<p><a href="index.php?module=tools-rpgcalendar&amp;action=add_weather">&#43; '
+        . $lang->rpgcalendar_tab_add_weather . '</a></p>';
+
+    $names = [];
+    foreach ($rpgcalendar_db->listLocations() as $loc) {
+        $names[(int)$loc['locid']] = $loc['name'];
+    }
+
+    $filter_loc = $mybb->get_input('filter_loc', MyBB::INPUT_INT);
+    if ($names) {
+        echo '<form action="index.php" method="get" style="margin-bottom: 8px;">'
+            . '<input type="hidden" name="module" value="tools-rpgcalendar" />'
+            . '<input type="hidden" name="action" value="weather" />'
+            . '<select name="filter_loc"><option value="0">' . $lang->rpgcalendar_filter_all_locations . '</option>';
+        foreach ($names as $lid => $lname) {
+            $sel = ($lid === $filter_loc) ? ' selected="selected"' : '';
+            echo '<option value="' . $lid . '"' . $sel . '>' . htmlspecialchars_uni($lname) . '</option>';
+        }
+        echo '</select> <input type="submit" class="submit_button" value="' . $lang->rpgcalendar_filter . '" /></form>';
+    }
+
+    $perpage  = 30;
+    $page_num = max(1, $mybb->get_input('page', MyBB::INPUT_INT));
+    $total    = $rpgcalendar_db->countWeather($filter_loc);
+    $offset   = ($page_num - 1) * $perpage;
+
+    $table = new Table();
+    $table->construct_header($lang->rpgcalendar_th_date, ['width' => '18%']);
+    $table->construct_header($lang->rpgcalendar_th_location, ['width' => '18%']);
+    $table->construct_header($lang->rpgcalendar_th_condition);
+    $table->construct_header($lang->rpgcalendar_th_source, ['width' => '10%', 'class' => 'align_center']);
+    $table->construct_header($lang->rpgcalendar_th_controls, ['width' => '18%', 'class' => 'align_center']);
+
+    foreach ($rpgcalendar_db->listWeather($filter_loc, $offset, $perpage) as $row) {
+        $wid = (int)$row['wid'];
+        $delete_form = '<form action="index.php" method="post" style="display:inline">'
+            . '<input type="hidden" name="module" value="tools-rpgcalendar" />'
+            . '<input type="hidden" name="action" value="delete_weather" />'
+            . '<input type="hidden" name="wid" value="' . $wid . '" />'
+            . '<input type="hidden" name="my_post_key" value="' . $mybb->post_code . '" />'
+            . '<input type="submit" class="submit_button" value="' . $lang->rpgcalendar_delete . '" />'
+            . '</form>';
+
+        $date = rpgcalendar_acp_format_date($row);
+        if ((int)$row['yearly'] === 1) {
+            $date .= ' <span class="smalltext">(' . $lang->rpgcalendar_yearly_short . ')</span>';
+        }
+
+        $table->construct_cell($date);
+        $table->construct_cell(htmlspecialchars_uni($names[(int)$row['locid']] ?? ('#' . (int)$row['locid'])));
+        $table->construct_cell(htmlspecialchars_uni($row['wcondition']) . ($row['note'] !== '' ? ' <span class="smalltext">' . htmlspecialchars_uni($row['note']) . '</span>' : ''));
+        $table->construct_cell(htmlspecialchars_uni($row['source']), ['class' => 'align_center']);
+        $table->construct_cell(
+            '<a href="index.php?module=tools-rpgcalendar&amp;action=edit_weather&amp;wid=' . $wid . '">'
+            . $lang->rpgcalendar_edit . '</a> &nbsp; ' . $delete_form,
+            ['class' => 'align_center']
+        );
+        $table->construct_row();
+    }
+    if (!$total) {
+        $table->construct_cell($lang->rpgcalendar_no_weather, ['colspan' => 5, 'class' => 'align_center']);
+        $table->construct_row();
+    }
+    $table->output($lang->rpgcalendar_tab_weather);
+
+    if ($total > $perpage) {
+        echo draw_admin_pagination($page_num, $perpage, $total,
+            'index.php?module=tools-rpgcalendar&amp;action=weather&amp;filter_loc=' . $filter_loc . '&amp;page={page}');
+    }
+
+    $page->output_footer();
+    exit;
+}
+
+// --- Holiday views ---
+
+if ($action === 'add_holiday') {
+    rpgcalendar_acp_holiday_form($rpgcalendar_db, array_merge(rpgcalendar_acp_dated_defaults(), [
+        'hid' => 0, 'locid' => 0, 'title' => '', 'description' => '',
+    ]), [], 'do_add_holiday', 'add_holiday');
+    exit;
+}
+
+if ($action === 'edit_holiday') {
+    $hid = $mybb->get_input('hid', MyBB::INPUT_INT);
+    $row = $rpgcalendar_db->getHoliday($hid);
+    if (!$row) {
+        flash_message($lang->rpgcalendar_error_not_found, 'error');
+        admin_redirect('index.php?module=tools-rpgcalendar&action=holidays');
+    }
+    rpgcalendar_acp_holiday_form($rpgcalendar_db, $row, [], 'do_edit_holiday', 'edit_holiday');
+    exit;
+}
+
+if ($action === 'holidays') {
+    $page->output_header($lang->rpgcalendar);
+    rpgcalendar_acp_tabs('holidays');
+
+    echo '<p><a href="index.php?module=tools-rpgcalendar&amp;action=add_holiday">&#43; '
+        . $lang->rpgcalendar_tab_add_holiday . '</a></p>';
+
+    $names = [];
+    foreach ($rpgcalendar_db->listLocations() as $loc) {
+        $names[(int)$loc['locid']] = $loc['name'];
+    }
+
+    $filter_loc = $mybb->get_input('filter_loc', MyBB::INPUT_INT);
+    if ($names) {
+        echo '<form action="index.php" method="get" style="margin-bottom: 8px;">'
+            . '<input type="hidden" name="module" value="tools-rpgcalendar" />'
+            . '<input type="hidden" name="action" value="holidays" />'
+            . '<select name="filter_loc"><option value="0">' . $lang->rpgcalendar_filter_all_locations . '</option>';
+        foreach ($names as $lid => $lname) {
+            $sel = ($lid === $filter_loc) ? ' selected="selected"' : '';
+            echo '<option value="' . $lid . '"' . $sel . '>' . htmlspecialchars_uni($lname) . '</option>';
+        }
+        echo '</select> <input type="submit" class="submit_button" value="' . $lang->rpgcalendar_filter . '" /></form>';
+    }
+
+    $perpage  = 30;
+    $page_num = max(1, $mybb->get_input('page', MyBB::INPUT_INT));
+    $total    = $rpgcalendar_db->countHolidays($filter_loc);
+    $offset   = ($page_num - 1) * $perpage;
+
+    $table = new Table();
+    $table->construct_header($lang->rpgcalendar_th_date, ['width' => '18%']);
+    $table->construct_header($lang->rpgcalendar_th_location, ['width' => '18%']);
+    $table->construct_header($lang->rpgcalendar_th_title);
+    $table->construct_header($lang->rpgcalendar_th_source, ['width' => '10%', 'class' => 'align_center']);
+    $table->construct_header($lang->rpgcalendar_th_controls, ['width' => '18%', 'class' => 'align_center']);
+
+    foreach ($rpgcalendar_db->listHolidays($filter_loc, $offset, $perpage) as $row) {
+        $hid = (int)$row['hid'];
+        $delete_form = '<form action="index.php" method="post" style="display:inline">'
+            . '<input type="hidden" name="module" value="tools-rpgcalendar" />'
+            . '<input type="hidden" name="action" value="delete_holiday" />'
+            . '<input type="hidden" name="hid" value="' . $hid . '" />'
+            . '<input type="hidden" name="my_post_key" value="' . $mybb->post_code . '" />'
+            . '<input type="submit" class="submit_button" value="' . $lang->rpgcalendar_delete . '" />'
+            . '</form>';
+
+        $date = rpgcalendar_acp_format_date($row);
+        if ((int)$row['yearly'] === 1) {
+            $date .= ' <span class="smalltext">(' . $lang->rpgcalendar_yearly_short . ')</span>';
+        }
+
+        $table->construct_cell($date);
+        $table->construct_cell(htmlspecialchars_uni($names[(int)$row['locid']] ?? ('#' . (int)$row['locid'])));
+        $table->construct_cell(htmlspecialchars_uni($row['title']));
+        $table->construct_cell(htmlspecialchars_uni($row['source']), ['class' => 'align_center']);
+        $table->construct_cell(
+            '<a href="index.php?module=tools-rpgcalendar&amp;action=edit_holiday&amp;hid=' . $hid . '">'
+            . $lang->rpgcalendar_edit . '</a> &nbsp; ' . $delete_form,
+            ['class' => 'align_center']
+        );
+        $table->construct_row();
+    }
+    if (!$total) {
+        $table->construct_cell($lang->rpgcalendar_no_holidays, ['colspan' => 5, 'class' => 'align_center']);
+        $table->construct_row();
+    }
+    $table->output($lang->rpgcalendar_tab_holidays);
+
+    if ($total > $perpage) {
+        echo draw_admin_pagination($page_num, $perpage, $total,
+            'index.php?module=tools-rpgcalendar&amp;action=holidays&amp;filter_loc=' . $filter_loc . '&amp;page={page}');
+    }
 
     $page->output_footer();
     exit;

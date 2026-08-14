@@ -11,6 +11,11 @@ built for RPG forums. It merges four event sources into one grid:
   documented provider hook, no configuration needed
 - **Birthdays** – from the native profile birthday or from a custom profile field
   (in-character birthdays that appear in every displayed year)
+- **Weather & holidays per location** – define play locations in the ACP; for **real**
+  locations the plugin generates real weather (Open-Meteo) and public holidays (Nager.Date)
+  as editable entries, for **fictional** locations the team fills them in by hand. Each
+  location's weather and holiday calendar can be recoloured or hidden per member on the
+  *My calendars* page.
 
 Plus a free text per month + year (weather, moon phases, …) above the grid and a table of
 all important events below it.
@@ -83,6 +88,49 @@ Path: **ACP → Tools & Maintenance → RPG Calendar → Month texts**
 One free text per month + year, shown in a box above the grid – ideal for weather, moon
 phases or a short summary of what is going on in your world that month. MyCode is allowed,
 HTML is not. Saving a text for a month that already has one overwrites it.
+
+You can **pre-fill** the text from a location's weather and holidays: pick a location, month
+and year in the *Pre-fill from weather / holidays* box, click *Generate suggestion*, then
+review and save the generated text.
+
+### Locations, weather & holidays (Admin)
+
+Path: **ACP → Tools & Maintenance → RPG Calendar → Locations / Weather / Holidays**
+
+Every play location exposes two calendars – **weather** and **holidays** – that appear on the
+*My calendars* page like any other calendar, so each member can recolour them or hide them
+(see [My calendars and colours](#my-calendars-and-colours)).
+
+1. **Locations** – *Add location* with a name and a type:
+   - **Real (world)** – enter an ISO country code (e.g. `DE`, `GB`, `US`) for holidays and a
+     city (or coordinates) for weather. On the location list, use *Generate* with a year range
+     to fetch real weather and holidays and store them as editable entries. Coordinates are
+     looked up automatically from the city on the first run. *Generate* again to refresh; it
+     replaces previously generated entries but keeps any you edited or added by hand.
+   - **Fictional** – no generation. When a fictional location has no data for the shown month,
+     the calendar shows a hint asking the team to add weather/holidays by hand.
+2. **Weather** – manual weather entries (location, condition, date range, optional yearly
+   pattern, optional note). Generated entries appear here too and can be edited (editing one
+   converts it to a manual entry so the next *Generate* keeps it).
+3. **Holidays** – manual holidays (location, title, date, optional *every year*). Holidays
+   also appear in the important-events table below the grid.
+
+**Weather icons:** set *Weather image directory* to a folder of images named after the
+condition (`clear`, `cloudy`, `fog`, `rain`, `snow`, `thunder` – e.g. `rain.png`). The plugin
+shows the matching image on the weather chip; if none is found it shows the condition text.
+**Holiday symbol:** set one symbol (emoji or image URL) shown in front of every holiday.
+
+In a day cell, weather is always shown on top, holidays below it, then the other events.
+
+#### Data sources & privacy
+
+For real locations the server makes outbound HTTPS requests **only when you click Generate**
+(never on a normal page view): to **Open-Meteo** (`open-meteo.com`) for weather and
+**Nager.Date** (`date.nager.at`) for public holidays, plus Open-Meteo geocoding to turn a city
+into coordinates. Only the location data you entered (city, country, coordinates) is sent – no
+member data. Both services are free and need no API key. Because real weather only exists for
+real dates, weather uses the archive for past days, the forecast for the next ~16 days, and
+climate normals further out; the in-game calendar date is treated as the real date.
 
 ### Global calendars (Admin)
 
@@ -191,6 +239,10 @@ Path: **ACP → Configuration → Settings → RPG Calendar**
 | Birthday year range | For the native source only: max. distance from the real current year |
 | Minimum / Maximum year | Navigation and input limits |
 | Default year / month | Start view when opened without parameters; 0 = real today |
+| Weather image directory | Board-relative folder with weather images named after the condition slug (`clear`, `cloudy`, `fog`, `rain`, `snow`, `thunder`) |
+| Holiday symbol | One symbol for all holidays: an emoji/short text or an image URL |
+| Show missing-data hint | Show the "please add data" hint for fictional locations without data |
+| Month text default location | Location used to pre-fill the month text in the ACP (0 = first location) |
 | Team groups | User groups whose members may create forum-wide events from the day view. Everyone else can only create personal events and invite individual members. Empty = only admins publish forum-wide events |
 | Current in-play months | Comma-separated `year-month` tokens (e.g. `1487-3, 1487-4`) whose month texts are collected into the global template variable `{$rpgcalendar_current_monthtexts}` (usable in templates and forum/category descriptions). Empty disables the variable (no query overhead) |
 | Allow HTML in event titles | Render HTML in event titles instead of escaping it. Only enable on calendars where you trust everyone who can create events – on public calendars this lets those users inject markup |
@@ -270,9 +322,10 @@ important-events table.
    settings and the stylesheet).
 2. Click **Uninstall** (drops all plugin tables: `rpgcalendar_events`,
    `rpgcalendar_monthtexts`, `rpgcalendar_event_invites`, `rpgcalendar_calendars`,
-   `rpgcalendar_calendar_members`, `rpgcalendar_calendar_prefs`, `rpgcalendar_feeds` – your
-   extended events, calendars, invitations and month texts are deleted; native calendar data
-   is never touched).
+   `rpgcalendar_calendar_members`, `rpgcalendar_calendar_prefs`, `rpgcalendar_feeds`,
+   `rpgcalendar_locations`, `rpgcalendar_weather`, `rpgcalendar_holidays` – your extended
+   events, calendars, invitations, month texts, locations, weather and holidays are deleted;
+   native calendar data is never touched).
 3. Delete the uploaded files (`rpgcalendar.php`, `inc/plugins/rpgcalendar.php`,
    `inc/plugins/rpgcalendar/`, `admin/modules/tools/rpgcalendar.php`, the language files).
 

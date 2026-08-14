@@ -108,6 +108,36 @@
     background: rgba(245, 158, 11, 0.12);
 }
 
+.rpgcalendar_event--weather {
+    border-left-color: #0ea5e9;
+    background: rgba(14, 165, 233, 0.12);
+}
+
+.rpgcalendar_event--holiday {
+    border-left-color: #ec4899;
+    background: rgba(236, 72, 153, 0.12);
+}
+
+/* Weather/holiday chip icon */
+.rpgcalendar_wicon {
+    height: 1.1em;
+    width: auto;
+    vertical-align: -0.15em;
+}
+
+/* Missing-data hint (fictional locations) */
+.rpgcalendar_hintbox {
+    margin-bottom: 10px;
+    padding: 8px 12px;
+    border-left: 3px solid #f59e0b;
+    border-radius: 3px;
+    background: rgba(245, 158, 11, 0.1);
+}
+
+.rpgcalendar_hintbox ul {
+    margin: 4px 0 0 18px;
+}
+
 /* Important-events table */
 .rpgcalendar_eventtable {
     margin-top: 10px;

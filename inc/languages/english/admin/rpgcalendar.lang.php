@@ -113,3 +113,98 @@ $l['rpgcalendar_error_year_range']           = "The year is outside the allowed 
 $l['rpgcalendar_error_invalid_repeat_until'] = "The 'repeat until' date is invalid or before the start date.";
 $l['rpgcalendar_error_not_found']            = "The requested entry does not exist.";
 $l['rpgcalendar_error_empty_text']           = "Please enter a text.";
+
+// ---------------------------------------------------------------------
+// v1.2 - Locations, weather & holidays
+// ---------------------------------------------------------------------
+$l['rpgcalendar_tab_locations']        = "Locations";
+$l['rpgcalendar_tab_desc_locations']   = "Places used for weather and holidays. Real locations can be generated automatically; fictional ones are filled in by hand.";
+$l['rpgcalendar_tab_weather']          = "Weather";
+$l['rpgcalendar_tab_desc_weather']     = "Weather entries per location. Generated entries can be edited; editing one keeps it on the next generation run.";
+$l['rpgcalendar_tab_holidays']         = "Holidays";
+$l['rpgcalendar_tab_desc_holidays']    = "Holiday entries per location. Generated entries can be edited freely.";
+$l['rpgcalendar_tab_add_location']     = "Add location";
+$l['rpgcalendar_tab_add_location_desc']  = "Create a new play location (real or fictional).";
+$l['rpgcalendar_tab_edit_location']    = "Edit location";
+$l['rpgcalendar_tab_edit_location_desc'] = "Change this location.";
+$l['rpgcalendar_tab_add_weather']      = "Add weather";
+$l['rpgcalendar_tab_add_weather_desc']   = "Add a manual weather entry for a location.";
+$l['rpgcalendar_tab_edit_weather']     = "Edit weather";
+$l['rpgcalendar_tab_edit_weather_desc']  = "Change this weather entry.";
+$l['rpgcalendar_tab_add_holiday']      = "Add holiday";
+$l['rpgcalendar_tab_add_holiday_desc']   = "Add a manual holiday for a location.";
+$l['rpgcalendar_tab_edit_holiday']     = "Edit holiday";
+$l['rpgcalendar_tab_edit_holiday_desc']  = "Change this holiday.";
+
+// Location form
+$l['rpgcalendar_field_locname']      = "Name";
+$l['rpgcalendar_field_locname_desc'] = "The location name shown in the calendar.";
+$l['rpgcalendar_field_loctype']      = "Type";
+$l['rpgcalendar_field_loctype_desc'] = "Real locations read live weather (Open-Meteo) and public holidays (Nager.Date). Fictional locations must be filled in by hand.";
+$l['rpgcalendar_loctype_fictional']  = "Fictional";
+$l['rpgcalendar_loctype_real']       = "Real (world)";
+$l['rpgcalendar_field_country']      = "Country code";
+$l['rpgcalendar_field_country_desc'] = "ISO 3166 two-letter code (e.g. DE, GB, US) – used for the holiday source. Real locations only.";
+$l['rpgcalendar_field_city']         = "City";
+$l['rpgcalendar_field_city_desc']    = "City name for the weather source. Coordinates are looked up automatically if left empty.";
+$l['rpgcalendar_field_coords']       = "Coordinates";
+$l['rpgcalendar_field_coords_desc']  = "Latitude and longitude (optional). Filled in automatically from the city on the first generation.";
+$l['rpgcalendar_field_disporder']    = "Display order";
+
+// Weather / holiday form
+$l['rpgcalendar_field_location']      = "Location";
+$l['rpgcalendar_field_location_desc'] = "Which location this entry belongs to.";
+$l['rpgcalendar_field_condition']     = "Condition";
+$l['rpgcalendar_field_condition_desc'] = "Condition slug – the plugin looks for an image of this name in the weather image directory. Standard slugs: clear, cloudy, fog, rain, snow, thunder.";
+$l['rpgcalendar_field_note']          = "Note";
+$l['rpgcalendar_field_note_desc']     = "Optional (e.g. a temperature). Shown next to the weather icon.";
+$l['rpgcalendar_field_yearly']        = "Every year";
+$l['rpgcalendar_field_yearly_desc']   = "If yes, this entry repeats on the same date in every year from the start year onwards.";
+
+// Location list
+$l['rpgcalendar_th_locname'] = "Name";
+$l['rpgcalendar_th_type']    = "Type";
+$l['rpgcalendar_th_place']   = "City / country";
+$l['rpgcalendar_no_locations'] = "No locations yet.";
+$l['rpgcalendar_confirm_delete_location'] = "Really delete? All weather and holiday data of this location will be removed.";
+
+// Weather / holiday list
+$l['rpgcalendar_th_location']  = "Location";
+$l['rpgcalendar_th_condition'] = "Condition";
+$l['rpgcalendar_th_source']    = "Source";
+$l['rpgcalendar_no_weather']   = "No weather entries yet.";
+$l['rpgcalendar_no_holidays']  = "No holidays yet.";
+$l['rpgcalendar_filter_all_locations'] = "All locations";
+$l['rpgcalendar_yearly_short'] = "yearly";
+
+// Generate
+$l['rpgcalendar_generate_title'] = "Generate weather &amp; holidays";
+$l['rpgcalendar_generate_desc']  = "For a real location: fetch real weather and holidays for the chosen year range and store them as editable entries (replacing previously generated ones).";
+$l['rpgcalendar_generate_btn']   = "Generate";
+$l['rpgcalendar_generate_done']  = "Generation finished: {1} weather entries and {2} holidays.";
+$l['rpgcalendar_generate_failed'] = "Nothing could be generated. Details: {1}";
+
+// Month text pre-fill
+$l['rpgcalendar_monthtext_prefill']      = "Pre-fill from weather / holidays";
+$l['rpgcalendar_monthtext_prefill_desc'] = "Pick a location, month and year to generate a suggested month text below. You can edit it before saving.";
+$l['rpgcalendar_monthtext_prefill_btn']  = "Generate suggestion";
+$l['rpgcalendar_monthtext_prefilled']    = "The month text field below was filled from the location's weather and holidays. Review and save it.";
+$l['rpgcalendar_monthtext_prefill_empty'] = "No weather or holiday data was found for that location, month and year.";
+$l['rpgcalendar_monthtext_weather_prefix'] = "Weather:";
+$l['rpgcalendar_monthtext_holiday_prefix'] = "Holidays:";
+
+// Weather condition labels (for the month-text suggestion)
+$l['rpgcalendar_wcond_clear']   = "Clear";
+$l['rpgcalendar_wcond_cloudy']  = "Cloudy";
+$l['rpgcalendar_wcond_fog']     = "Fog";
+$l['rpgcalendar_wcond_rain']    = "Rain";
+$l['rpgcalendar_wcond_snow']    = "Snow";
+$l['rpgcalendar_wcond_thunder'] = "Thunderstorm";
+
+// Additional errors
+$l['rpgcalendar_error_invalid_name']    = "Please enter a name.";
+$l['rpgcalendar_error_country']         = "Real locations need a two-letter ISO country code.";
+$l['rpgcalendar_error_city_or_coords']  = "Real locations need a city or coordinates.";
+$l['rpgcalendar_error_not_real']        = "This location is not a real location, so it cannot be generated.";
+$l['rpgcalendar_error_location']        = "Please choose a valid location.";
+$l['rpgcalendar_error_condition']       = "Please enter a weather condition.";

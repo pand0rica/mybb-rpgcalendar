@@ -3,6 +3,37 @@
 All notable changes to this project will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [1.2.0] - 2026-08-14
+
+### New
+- Play locations (ACP → RPG Calendar → Locations), each real or fictional. For **real**
+  locations the plugin generates real weather from Open-Meteo (archive / forecast / climate
+  normals, mapped from WMO weather codes to condition slugs) and public holidays from
+  Nager.Date, stored as editable "auto" entries. Triggered by an ACP *Generate* button over a
+  year range; re-generating replaces auto entries but keeps manual ones (editing an auto entry
+  converts it to manual). City names are geocoded via Open-Meteo. **Fictional** locations show
+  a hint asking the team to add data by hand when a shown month has no data.
+- Each location exposes two virtual calendars, `weather-{locid}` and `holiday-{locid}`, that
+  plug into the existing per-user calendar system: members recolour or hide them on the
+  "My calendars" page like any other calendar (no separate toggle). Weather sits above
+  holidays in a day cell; holidays also appear in the important-events table.
+- Weather chips show an image from a configurable directory (matched by condition slug) with a
+  text fallback; one configurable symbol precedes every holiday.
+- Month-text pre-fill in the ACP: generate a suggested month text from a location's weather and
+  holidays, then edit and save it.
+- New tables `rpgcalendar_locations`, `rpgcalendar_weather`, `rpgcalendar_holidays`; new
+  settings for the weather image directory, holiday symbol, missing-data hint and month-text
+  default location. Tables are created idempotently on activation (upgrade path).
+
+### Changed
+- Shared `datedOccurrenceStarts()` engine helper for one-time and yearly occurrence math,
+  reused by weather and holidays.
+
+### Security
+- New writes go through POST + `verify_post_check()`, input via `get_input()`, output escaped.
+  Outbound requests happen only on an explicit ACP generate action, via MyBB's
+  `fetch_remote_file()`, and send only team-entered location data (no member data).
+
 ## [1.1.0] - 2026-08-13
 
 ### New

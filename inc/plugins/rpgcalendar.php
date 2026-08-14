@@ -31,11 +31,11 @@ function rpgcalendar_info(): array
 {
     return [
         'name'          => 'RPG Calendar',
-        'description'   => 'Modern calendar replacement: native events, extended events in any year, member event creation with invitations, personal & shared sub-calendars, plots via provider hook, monthly free texts and important-event tables.',
+        'description'   => 'Modern calendar replacement: native events, extended events in any year, member event creation with invitations, personal & shared sub-calendars, per-location weather &amp; holidays (auto-generated for real places), plots via provider hook, monthly free texts and important-event tables.',
         'website'       => 'https://github.com/pand0rica/rpgcalendar',
         'author'        => 'pand0rica',
         'authorsite'    => 'https://github.com/pand0rica',
-        'version'       => '1.1.0',
+        'version'       => '1.2.0',
         'guid'          => '',
         'codename'      => 'rpgcalendar',
         'compatibility' => '18*',

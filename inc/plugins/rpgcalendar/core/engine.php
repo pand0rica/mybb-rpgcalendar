@@ -22,6 +22,10 @@ class Rpgcalendar_Engine
     /** Default colour of the built-in virtual "birthdays" calendar. */
     const BIRTHDAY_COLOR = '#f59e0b';
 
+    /** Default colours of the per-location weather/holiday virtual calendars. */
+    const WEATHER_COLOR = '#0ea5e9';
+    const HOLIDAY_COLOR = '#ec4899';
+
     /** @var Rpgcalendar_Database */
     private $database;
 
@@ -135,6 +139,37 @@ class Rpgcalendar_Engine
         return [$ny, $idx - $ny * 12 + 1];
     }
 
+    /**
+     * Occurrence start day-numbers of a dated entry that could touch the viewed
+     * year. Handles one-time (single occurrence) and yearly (once per year from
+     * the start year onwards, skipping years where the start day does not exist,
+     * e.g. Feb 29). May over-deliver a look-back window for multi-day yearly
+     * spans; the caller filters by month overlap. Used by weather and holidays.
+     *
+     * @return int[] day numbers of the occurrence starts
+     */
+    public static function datedOccurrenceStarts(int $start_y, int $start_m, int $start_d, int $span, bool $yearly, int $view_year): array
+    {
+        if (!$yearly) {
+            return [self::dayNumber($start_y, $start_m, $start_d)];
+        }
+
+        $starts = [];
+        $back = intdiv($span, 365) + 1;
+        for ($i = 0; $i <= $back; $i++) {
+            $cy = $view_year - $i;
+            if ($cy < $start_y) {
+                continue;
+            }
+            if ($start_d > self::daysInMonth($cy, $start_m)) {
+                continue;
+            }
+            $starts[] = self::dayNumber($cy, $start_m, $start_d);
+        }
+
+        return $starts;
+    }
+
     // -------------------------------------------------------------------
     // Month view assembly
     // -------------------------------------------------------------------
@@ -176,6 +211,7 @@ class Rpgcalendar_Engine
             $days[$d] = ['events' => [], 'birthdays' => []];
         }
         $important = [];
+        $hints     = [];
 
         // 1) Extended events from rpgcalendar_events (incl. repeat expansion)
         $rows = $this->database->getEventsForMonthView($month_start_key, $month_end_key, $viewer_uid);
@@ -234,6 +270,65 @@ class Rpgcalendar_Engine
             }
         }
 
+        // 4b) Weather + holiday sub-calendars per location. Each location exposes
+        // two virtual calendars ('weather-{locid}'/'holiday-{locid}') that use the
+        // same per-user colour/visibility (calendar_prefs) as every other calendar.
+        // Weather sits above holidays in a day cell; holidays are important.
+        $locations = $this->database->listLocations(true);
+        if ($locations) {
+            $weather_locids = $holiday_locids = [];
+            $wstate = $hstate = $locname = [];
+            foreach ($locations as $loc) {
+                $lid = (int)$loc['locid'];
+                $locname[$lid] = (string)$loc['name'];
+                $wstate[$lid] = $this->resolveCalendar('weather-' . $lid, self::WEATHER_COLOR);
+                $hstate[$lid] = $this->resolveCalendar('holiday-' . $lid, self::HOLIDAY_COLOR);
+                if ($wstate[$lid]['visible']) {
+                    $weather_locids[] = $lid;
+                }
+                if ($hstate[$lid]['visible']) {
+                    $holiday_locids[] = $lid;
+                }
+            }
+
+            $weather_present = $holiday_present = [];
+            foreach ($this->database->getWeatherForMonthView($month_start_key, $month_end_key, $weather_locids) as $row) {
+                $lid = (int)$row['locid'];
+                if ($this->expandWeatherRow($row, $locname[$lid] ?? '', $wstate[$lid]['color'], $month_start_n, $month_end_n, $days, $important)) {
+                    $weather_present[$lid] = true;
+                }
+            }
+            foreach ($this->database->getHolidayForMonthView($month_start_key, $month_end_key, $holiday_locids) as $row) {
+                $lid = (int)$row['locid'];
+                if ($this->expandHolidayRow($row, $locname[$lid] ?? '', $hstate[$lid]['color'], $month_start_n, $month_end_n, $days, $important)) {
+                    $holiday_present[$lid] = true;
+                }
+            }
+
+            // Hints only for enabled fictional locations without data this month
+            // (real locations can be generated instead of hand-filled).
+            foreach ($locations as $loc) {
+                if ((int)$loc['type'] !== 0) {
+                    continue;
+                }
+                $lid = (int)$loc['locid'];
+                $w_missing = $wstate[$lid]['visible'] && !isset($weather_present[$lid]);
+                $h_missing = $hstate[$lid]['visible'] && !isset($holiday_present[$lid]);
+                if ($w_missing || $h_missing) {
+                    $hints[] = [
+                        'name'    => (string)$loc['name'],
+                        'weather' => $w_missing,
+                        'holiday' => $h_missing,
+                    ];
+                }
+            }
+        }
+
+        // Within each day: weather (sort 0) above holidays (1) above the rest (2).
+        foreach ($days as $d => $data) {
+            $days[$d]['events'] = self::sortDayEvents($data['events']);
+        }
+
         // 5) Important-events table, sorted by start date
         usort($important, function (array $a, array $b): int {
             $ka = self::dateKey($a['start']['y'], $a['start']['m'], $a['start']['d']);
@@ -257,7 +352,133 @@ class Rpgcalendar_Engine
             'important'      => $important,
             'today_day'      => $today_day,
             'birthday_color' => $birthday_state['color'],
+            'hints'          => $hints,
         ];
+    }
+
+    /** Stable sort of a day's events by their 'sort' weight (default 2). */
+    private static function sortDayEvents(array $events): array
+    {
+        $i = 0;
+        foreach ($events as &$e) {
+            $e['_idx'] = $i++;
+        }
+        unset($e);
+
+        usort($events, function (array $a, array $b): int {
+            $sa = $a['sort'] ?? 2;
+            $sb = $b['sort'] ?? 2;
+            if ($sa === $sb) {
+                return $a['_idx'] <=> $b['_idx'];
+            }
+
+            return ($sa < $sb) ? -1 : 1;
+        });
+
+        foreach ($events as &$e) {
+            unset($e['_idx']);
+        }
+        unset($e);
+
+        return $events;
+    }
+
+    /**
+     * Places every occurrence of a weather row that overlaps the viewed month.
+     * Weather is never "important" (grid only). Returns true if anything landed.
+     */
+    private function expandWeatherRow(array $row, string $locname, string $color, int $month_start_n, int $month_end_n, array &$days, array &$important): bool
+    {
+        $start_y = (int)$row['start_year'];
+        $start_m = (int)$row['start_month'];
+        $start_d = (int)$row['start_day'];
+        $start_n = self::dayNumber($start_y, $start_m, $start_d);
+        $end_n   = self::dayNumber((int)$row['end_year'], (int)$row['end_month'], (int)$row['end_day']);
+        $span    = max(0, $end_n - $start_n);
+        $yearly  = ((int)$row['yearly'] === 1);
+        $view    = self::fromDayNumber($month_start_n);
+        $locid   = (int)$row['locid'];
+
+        $placed = false;
+        foreach (self::datedOccurrenceStarts($start_y, $start_m, $start_d, $span, $yearly, $view['y']) as $occ_start_n) {
+            if ($occ_start_n < $start_n) {
+                continue;
+            }
+            $occ_end_n = $occ_start_n + $span;
+            if ($occ_end_n < $month_start_n || $occ_start_n > $month_end_n) {
+                continue;
+            }
+            $event = [
+                'id'           => 'weather-' . (int)$row['wid'] . '-' . $occ_start_n,
+                'source'       => 'weather',
+                'title'        => '',
+                'condition'    => (string)$row['wcondition'],
+                'note'         => (string)$row['note'],
+                'description'  => '',
+                'url'          => '',
+                'start'        => self::fromDayNumber($occ_start_n),
+                'end'          => self::fromDayNumber($occ_end_n),
+                'important'    => false,
+                'badge'        => 'weather',
+                'calendar_key' => 'weather-' . $locid,
+                'color'        => $color,
+                'sort'         => 0,
+                'locname'      => $locname,
+            ];
+            $this->placeEvent($event, $month_start_n, $month_end_n, $days, $important);
+            $placed = true;
+        }
+
+        return $placed;
+    }
+
+    /**
+     * Places every occurrence of a holiday row. Holidays are "important" (they
+     * also show in the event table). Returns true if anything landed.
+     */
+    private function expandHolidayRow(array $row, string $locname, string $color, int $month_start_n, int $month_end_n, array &$days, array &$important): bool
+    {
+        $start_y = (int)$row['start_year'];
+        $start_m = (int)$row['start_month'];
+        $start_d = (int)$row['start_day'];
+        $start_n = self::dayNumber($start_y, $start_m, $start_d);
+        $end_n   = self::dayNumber((int)$row['end_year'], (int)$row['end_month'], (int)$row['end_day']);
+        $span    = max(0, $end_n - $start_n);
+        $yearly  = ((int)$row['yearly'] === 1);
+        $view    = self::fromDayNumber($month_start_n);
+        $locid   = (int)$row['locid'];
+
+        $placed = false;
+        foreach (self::datedOccurrenceStarts($start_y, $start_m, $start_d, $span, $yearly, $view['y']) as $occ_start_n) {
+            if ($occ_start_n < $start_n) {
+                continue;
+            }
+            $occ_end_n = $occ_start_n + $span;
+            if ($occ_end_n < $month_start_n || $occ_start_n > $month_end_n) {
+                continue;
+            }
+            $event = [
+                'id'           => 'holiday-' . (int)$row['hid'] . '-' . $occ_start_n,
+                'source'       => 'holiday',
+                'title'        => (string)$row['title'],
+                'condition'    => '',
+                'note'         => '',
+                'description'  => (string)$row['description'],
+                'url'          => '',
+                'start'        => self::fromDayNumber($occ_start_n),
+                'end'          => self::fromDayNumber($occ_end_n),
+                'important'    => true,
+                'badge'        => 'holiday',
+                'calendar_key' => 'holiday-' . $locid,
+                'color'        => $color,
+                'sort'         => 1,
+                'locname'      => $locname,
+            ];
+            $this->placeEvent($event, $month_start_n, $month_end_n, $days, $important);
+            $placed = true;
+        }
+
+        return $placed;
     }
 
     /**
@@ -305,6 +526,28 @@ class Rpgcalendar_Engine
                 'key'           => 'birthdays',
                 'name'          => $lang->rpgcalendar_cal_birthdays,
                 'default_color' => self::BIRTHDAY_COLOR,
+            ];
+        }
+
+        // Per-location weather & holiday calendars, so members can recolour or
+        // hide each one on the "My calendars" page like any other calendar.
+        require_once MYBB_ROOT . 'inc/plugins/rpgcalendar/core/database.php';
+        if (!isset($lang->rpgcalendar_cal_weather)) {
+            $lang->load('rpgcalendar');
+        }
+        $database = new Rpgcalendar_Database();
+        foreach ($database->listLocations(true) as $loc) {
+            $lid  = (int)$loc['locid'];
+            $name = (string)$loc['name'];
+            $cals[] = [
+                'key'           => 'weather-' . $lid,
+                'name'          => $lang->rpgcalendar_cal_weather . ' – ' . $name,
+                'default_color' => self::WEATHER_COLOR,
+            ];
+            $cals[] = [
+                'key'           => 'holiday-' . $lid,
+                'name'          => $lang->rpgcalendar_cal_holiday . ' – ' . $name,
+                'default_color' => self::HOLIDAY_COLOR,
             ];
         }
 
