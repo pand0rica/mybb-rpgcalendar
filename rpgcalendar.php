@@ -1327,6 +1327,7 @@ if ($rpgcalendar_action === 'weatherinfo' || $rpgcalendar_action === 'holidayinf
         $label             = rpgcalendar_weather_label((string)$row['wcondition']);
         $event_title_plain = $label;
         $event_title       = rpgcalendar_weather_symbol((string)$row['wcondition'], $label, (int)$row['wid']) . htmlspecialchars_uni($label);
+        $parts[] = $lang->rpgcalendar_detail_condition . ' ' . htmlspecialchars_uni($label);
         if ($locname !== '') {
             $parts[] = $lang->sprintf($lang->rpgcalendar_weather_in, $locname);
         }

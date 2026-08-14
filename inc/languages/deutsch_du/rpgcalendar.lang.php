@@ -46,6 +46,7 @@ $l['rpgcalendar_wcond_thunder'] = "Gewitter";
 // Wetter-/Feiertags-Detailansicht
 $l['rpgcalendar_weather_in']       = "Wetter in {1}.";
 $l['rpgcalendar_holiday_in']       = "Feiertag in {1}.";
+$l['rpgcalendar_detail_condition'] = "Wetter:";
 $l['rpgcalendar_detail_temp']      = "Temperatur:";
 $l['rpgcalendar_detail_notfound']  = "Dieser Eintrag existiert nicht.";
 

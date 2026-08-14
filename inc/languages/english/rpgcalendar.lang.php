@@ -46,6 +46,7 @@ $l['rpgcalendar_wcond_thunder'] = "Thunderstorm";
 // Weather/holiday detail view
 $l['rpgcalendar_weather_in']       = "Weather in {1}.";
 $l['rpgcalendar_holiday_in']       = "Public holiday in {1}.";
+$l['rpgcalendar_detail_condition'] = "Weather:";
 $l['rpgcalendar_detail_temp']      = "Temperature:";
 $l['rpgcalendar_detail_notfound']  = "This entry does not exist.";
 
