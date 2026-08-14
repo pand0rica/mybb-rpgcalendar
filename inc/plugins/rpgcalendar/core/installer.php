@@ -419,7 +419,12 @@ class Rpgcalendar_Installer
             ],
             'weather_imagedir' => [
                 'Weather image directory',
-                'Board-relative URL path to the folder with weather condition images. The plugin looks for a file named after the condition slug (clear, cloudy, fog, rain, snow, thunder) with a .png/.gif/.jpg/.svg extension. Falls back to the condition text if no image is found.',
+                'Board-relative URL path to the folder with weather condition images '
+                    . '(e.g. images/rpgcalendar/weather). The plugin looks for a file named '
+                    . 'after the weather condition with a .png, .gif, .jpg, .jpeg, .svg or .webp '
+                    . 'extension. The possible condition names are: clear (sunny), cloudy, fog, '
+                    . 'rain, snow, thunder (thunderstorm) &ndash; e.g. rain.png. If no matching '
+                    . 'image exists, the localized condition text is shown instead.',
                 'text', 'images/rpgcalendar/weather',
             ],
             'holiday_symbol' => [
