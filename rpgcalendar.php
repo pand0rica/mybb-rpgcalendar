@@ -366,19 +366,8 @@ if ($rpgcalendar_action === 'day') {
     $rpgcalendar_daydate   = $day . '. ' . htmlspecialchars_uni($lang->{'rpgcalendar_month_' . $month}) . ' ' . $year;
     $rpgcalendar_pagetitle = $lang->rpgcalendar_title . ' - ' . $rpgcalendar_daydate;
 
+    // Events first (weather on top, then holidays, then the rest), birthdays below.
     $day_rows = '';
-    foreach ($day_birthdays as $entry) {
-        $row_badge = 'birthday';
-        $row_type  = htmlspecialchars_uni($lang->rpgcalendar_birthday);
-        $row_title = build_profile_link(
-            format_name(htmlspecialchars_uni($entry['username']), (int)$entry['usergroup'], (int)$entry['displaygroup']),
-            (int)$entry['uid']
-        );
-        if ($entry['age'] !== null) {
-            $row_title .= ' (' . (int)$entry['age'] . ')';
-        }
-        eval('$day_rows .= "' . $templates->get('rpgcalendar_day_row') . '";');
-    }
     foreach ($day_events as $event) {
         $row_badge  = htmlspecialchars_uni($event['badge']);
         $source_key = 'rpgcalendar_source_' . $event['source'];
@@ -400,6 +389,18 @@ if ($rpgcalendar_action === 'day') {
             $row_title = '<a href="' . htmlspecialchars_uni($detail_url) . '">' . $title_text . '</a>';
         } else {
             $row_title = $title_text;
+        }
+        eval('$day_rows .= "' . $templates->get('rpgcalendar_day_row') . '";');
+    }
+    foreach ($day_birthdays as $entry) {
+        $row_badge = 'birthday';
+        $row_type  = htmlspecialchars_uni($lang->rpgcalendar_birthday);
+        $row_title = build_profile_link(
+            format_name(htmlspecialchars_uni($entry['username']), (int)$entry['usergroup'], (int)$entry['displaygroup']),
+            (int)$entry['uid']
+        );
+        if ($entry['age'] !== null) {
+            $row_title .= ' (' . (int)$entry['age'] . ')';
         }
         eval('$day_rows .= "' . $templates->get('rpgcalendar_day_row') . '";');
     }
