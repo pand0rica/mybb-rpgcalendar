@@ -22,8 +22,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 - Month-text pre-fill in the ACP: generate a suggested month text from a location's weather and
   holidays, then edit and save it.
 - New tables `rpgcalendar_locations`, `rpgcalendar_weather`, `rpgcalendar_holidays`; new
-  settings for the weather image directory, holiday symbol, missing-data hint and month-text
-  default location. Tables are created idempotently on activation (upgrade path).
+  settings for the weather image directory, holiday symbol and missing-data hint. Tables are
+  created idempotently on activation (upgrade path).
 
 ### Changed
 - Shared `datedOccurrenceStarts()` engine helper for one-time and yearly occurrence math,

@@ -432,11 +432,6 @@ class Rpgcalendar_Installer
                 'Show a hint for fictional locations that have no weather/holiday data for the displayed month, asking the team to add it manually.',
                 'onoff', '1',
             ],
-            'monthtext_location' => [
-                'Month text default location',
-                'Location (locid) used to pre-fill the month text from weather/holidays in the ACP. 0 = the first location.',
-                'numeric', '0',
-            ],
         ];
     }
 

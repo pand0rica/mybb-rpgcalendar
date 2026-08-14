@@ -242,7 +242,6 @@ Path: **ACP → Configuration → Settings → RPG Calendar**
 | Weather image directory | Board-relative folder with weather images named after the condition slug (`clear`, `cloudy`, `fog`, `rain`, `snow`, `thunder`) |
 | Holiday symbol | One symbol for all holidays: an emoji/short text or an image URL |
 | Show missing-data hint | Show the "please add data" hint for fictional locations without data |
-| Month text default location | Location used to pre-fill the month text in the ACP (0 = first location) |
 | Team groups | User groups whose members may create forum-wide events from the day view. Everyone else can only create personal events and invite individual members. Empty = only admins publish forum-wide events |
 | Current in-play months | Comma-separated `year-month` tokens (e.g. `1487-3, 1487-4`) whose month texts are collected into the global template variable `{$rpgcalendar_current_monthtexts}` (usable in templates and forum/category descriptions). Empty disables the variable (no query overhead) |
 | Allow HTML in event titles | Render HTML in event titles instead of escaping it. Only enable on calendars where you trust everyone who can create events – on public calendars this lets those users inject markup |

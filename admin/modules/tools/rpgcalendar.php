@@ -1159,10 +1159,8 @@ if ($action === 'monthtexts' || $action === 'prefill_monthtext') {
     $form_content = $edit_row ? $edit_row['content'] : '';
 
     // Pre-fill request: generate the content from a location's weather/holidays.
+    // The location comes from the pre-fill form's dropdown (first location by default).
     $prefill_locid = $mybb->get_input('prefill_locid', MyBB::INPUT_INT);
-    if ($prefill_locid <= 0) {
-        $prefill_locid = (int)($mybb->settings['rpgcalendar_monthtext_location'] ?? 0);
-    }
     if ($action === 'prefill_monthtext') {
         $form_year  = $mybb->get_input('year', MyBB::INPUT_INT);
         $form_month = $mybb->get_input('month', MyBB::INPUT_INT);
