@@ -121,6 +121,8 @@ shows the matching image on the weather chip; if none is found it shows the cond
 **Holiday symbol:** set one symbol (emoji or image URL) shown in front of every holiday.
 
 In a day cell, weather is always shown on top, holidays below it, then the other events.
+Weather and holiday chips are clickable and open a small detail page with a short description
+(location, temperature for weather, description for holidays).
 
 #### Data sources & privacy
 

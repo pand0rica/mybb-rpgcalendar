@@ -408,6 +408,7 @@ class Rpgcalendar_Engine
             if ($occ_end_n < $month_start_n || $occ_start_n > $month_end_n) {
                 continue;
             }
+            $occ_start = self::fromDayNumber($occ_start_n);
             $event = [
                 'id'           => 'weather-' . (int)$row['wid'] . '-' . $occ_start_n,
                 'source'       => 'weather',
@@ -415,8 +416,9 @@ class Rpgcalendar_Engine
                 'condition'    => (string)$row['wcondition'],
                 'note'         => (string)$row['note'],
                 'description'  => '',
-                'url'          => '',
-                'start'        => self::fromDayNumber($occ_start_n),
+                'url'          => 'rpgcalendar.php?action=weatherinfo&wid=' . (int)$row['wid']
+                    . '&year=' . $occ_start['y'] . '&month=' . $occ_start['m'] . '&day=' . $occ_start['d'],
+                'start'        => $occ_start,
                 'end'          => self::fromDayNumber($occ_end_n),
                 'important'    => false,
                 'badge'        => 'weather',
@@ -457,6 +459,7 @@ class Rpgcalendar_Engine
             if ($occ_end_n < $month_start_n || $occ_start_n > $month_end_n) {
                 continue;
             }
+            $occ_start = self::fromDayNumber($occ_start_n);
             $event = [
                 'id'           => 'holiday-' . (int)$row['hid'] . '-' . $occ_start_n,
                 'source'       => 'holiday',
@@ -464,8 +467,9 @@ class Rpgcalendar_Engine
                 'condition'    => '',
                 'note'         => '',
                 'description'  => (string)$row['description'],
-                'url'          => '',
-                'start'        => self::fromDayNumber($occ_start_n),
+                'url'          => 'rpgcalendar.php?action=holidayinfo&hid=' . (int)$row['hid']
+                    . '&year=' . $occ_start['y'] . '&month=' . $occ_start['m'] . '&day=' . $occ_start['d'],
+                'start'        => $occ_start,
                 'end'          => self::fromDayNumber($occ_end_n),
                 'important'    => true,
                 'badge'        => 'holiday',

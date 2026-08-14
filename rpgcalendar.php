@@ -1256,6 +1256,78 @@ if ($rpgcalendar_action === 'event') {
     exit;
 }
 
+// Weather / holiday detail view (reuses the rpgcalendar_event template). Renders a
+// short, localized description text for a single weather or holiday entry.
+if ($rpgcalendar_action === 'weatherinfo' || $rpgcalendar_action === 'holidayinfo') {
+    $is_weather = ($rpgcalendar_action === 'weatherinfo');
+    $row = $is_weather
+        ? $rpgcalendar_database->getWeather($mybb->get_input('wid', MyBB::INPUT_INT))
+        : $rpgcalendar_database->getHoliday($mybb->get_input('hid', MyBB::INPUT_INT));
+    if ($row === null || (int)$row['visible'] !== 1) {
+        error($lang->rpgcalendar_detail_notfound);
+    }
+
+    $loc     = $rpgcalendar_database->getLocation((int)$row['locid']);
+    $locname = $loc ? htmlspecialchars_uni($loc['name']) : '';
+
+    // Occurrence date from the URL (falls back to the row's start date).
+    $y = $mybb->get_input('year', MyBB::INPUT_INT);
+    $m = $mybb->get_input('month', MyBB::INPUT_INT);
+    $d = $mybb->get_input('day', MyBB::INPUT_INT);
+    if ($m < 1 || $m > 12 || $d < 1 || $d > Rpgcalendar_Engine::daysInMonth($y, $m)) {
+        $y = (int)$row['start_year'];
+        $m = (int)$row['start_month'];
+        $d = (int)$row['start_day'];
+    }
+    $event_date = $d . '.' . $m . '.' . $y;
+    $span = Rpgcalendar_Engine::dayNumber((int)$row['end_year'], (int)$row['end_month'], (int)$row['end_day'])
+        - Rpgcalendar_Engine::dayNumber((int)$row['start_year'], (int)$row['start_month'], (int)$row['start_day']);
+    if ($span > 0) {
+        $end = Rpgcalendar_Engine::fromDayNumber(Rpgcalendar_Engine::dayNumber($y, $m, $d) + $span);
+        $event_date .= ' &ndash; ' . $end['d'] . '.' . $end['m'] . '.' . $end['y'];
+    }
+
+    $parts = [];
+    if ($is_weather) {
+        $label             = rpgcalendar_weather_label((string)$row['wcondition']);
+        $event_title_plain = $label;
+        $event_title       = rpgcalendar_weather_symbol((string)$row['wcondition'], $label) . htmlspecialchars_uni($label);
+        if ($locname !== '') {
+            $parts[] = $lang->sprintf($lang->rpgcalendar_weather_in, $locname);
+        }
+        if ((string)$row['note'] !== '') {
+            $parts[] = $lang->rpgcalendar_detail_temp . ' ' . htmlspecialchars_uni((string)$row['note']);
+        }
+    } else {
+        $event_title_plain = (string)$row['title'];
+        $event_title       = rpgcalendar_holiday_symbol() . htmlspecialchars_uni((string)$row['title']);
+        if ($locname !== '') {
+            $parts[] = $lang->sprintf($lang->rpgcalendar_holiday_in, $locname);
+        }
+        if (trim((string)$row['description']) !== '') {
+            $parts[] = htmlspecialchars_uni((string)$row['description']);
+        }
+    }
+    $event_description   = $parts ? '<p>' . implode('</p><p>', $parts) . '</p>' : '';
+    $event_author_line   = '';
+    $event_invites       = '';
+    $event_response_form = '';
+    $event_manage        = '';
+
+    if ($d >= 1 && $d <= Rpgcalendar_Engine::daysInMonth($y, $m)) {
+        $event_backurl = 'rpgcalendar.php?action=day&amp;year=' . $y . '&amp;month=' . $m . '&amp;day=' . $d;
+    } else {
+        $event_backurl = 'rpgcalendar.php?year=' . $y . '&amp;month=' . $m;
+    }
+    $kind_label      = $is_weather ? $lang->rpgcalendar_cal_weather : $lang->rpgcalendar_cal_holiday;
+    $event_pagetitle = $lang->rpgcalendar_title . ' - ' . $kind_label . ': ' . $event_title_plain;
+    add_breadcrumb($event_title_plain);
+
+    eval('$page = "' . $templates->get('rpgcalendar_event') . '";');
+    output_page($page);
+    exit;
+}
+
 $startofweek = $rpgcalendar_native->getStartOfWeek();
 $month_data  = $rpgcalendar_engine->getMonthData($year, $month, $startofweek, (int)$mybb->user['uid']);
 
