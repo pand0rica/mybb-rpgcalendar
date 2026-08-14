@@ -412,17 +412,19 @@ class Rpgcalendar_Generator
             if ($ymd === null) {
                 continue;
             }
+            // Prefer localName (the holiday's name in the country's own language,
+            // e.g. German for DE); the English "name" is intentionally not stored
+            // so generated holidays stay in the local/MyBB language.
             $local = isset($entry['localName']) ? trim((string)$entry['localName']) : '';
             $name  = isset($entry['name']) ? trim((string)$entry['name']) : '';
             $title = ($local !== '') ? $local : $name;
             if ($title === '') {
                 continue;
             }
-            $desc = ($name !== '' && $name !== $title) ? $name : '';
             $out[] = [
                 'y' => $ymd['y'], 'm' => $ymd['m'], 'd' => $ymd['d'],
                 'title' => my_substr($title, 0, 200),
-                'description' => my_substr($desc, 0, 255),
+                'description' => '',
             ];
         }
 

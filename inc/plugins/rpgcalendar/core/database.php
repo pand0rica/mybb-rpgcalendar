@@ -930,6 +930,16 @@ class Rpgcalendar_Database
             . ' AND start_key >= ' . (int)$from_key . ' AND start_key <= ' . (int)$to_key);
     }
 
+    /** Deletes all generated (auto) weather rows, optionally for one location. */
+    public function deleteAutoWeather(int $locid = 0): void
+    {
+        $where = "source = 'auto'";
+        if ($locid > 0) {
+            $where .= ' AND locid = ' . (int)$locid;
+        }
+        $this->db->delete_query('rpgcalendar_weather', $where);
+    }
+
     public function countWeather(int $locid = 0): int
     {
         $where = ($locid !== 0) ? 'locid = ' . (int)$locid : '1=1';
@@ -1045,6 +1055,16 @@ class Rpgcalendar_Database
         $this->db->delete_query('rpgcalendar_holidays',
             "source = 'auto' AND locid = " . (int)$locid
             . ' AND start_key >= ' . (int)$from_key . ' AND start_key <= ' . (int)$to_key);
+    }
+
+    /** Deletes all generated (auto) holiday rows, optionally for one location. */
+    public function deleteAutoHoliday(int $locid = 0): void
+    {
+        $where = "source = 'auto'";
+        if ($locid > 0) {
+            $where .= ' AND locid = ' . (int)$locid;
+        }
+        $this->db->delete_query('rpgcalendar_holidays', $where);
     }
 
     public function countHolidays(int $locid = 0): int

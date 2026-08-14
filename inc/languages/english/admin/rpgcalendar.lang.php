@@ -208,3 +208,8 @@ $l['rpgcalendar_error_city_or_coords']  = "Real locations need a city or coordin
 $l['rpgcalendar_error_not_real']        = "This location is not a real location, so it cannot be generated.";
 $l['rpgcalendar_error_location']        = "Please choose a valid location.";
 $l['rpgcalendar_error_condition']       = "Please enter a weather condition.";
+
+// Bulk delete of generated entries
+$l['rpgcalendar_delete_auto']         = "Delete all generated";
+$l['rpgcalendar_confirm_delete_auto'] = "Delete all generated (auto) entries? Manually added or edited entries are kept.";
+$l['rpgcalendar_delete_auto_done']    = "All generated entries have been deleted.";
