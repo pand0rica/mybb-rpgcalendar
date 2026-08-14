@@ -427,8 +427,16 @@ class Rpgcalendar_Installer
                     . 'you can add several images per condition using a dash suffix '
                     . '(rain.png, rain-1.png, rain-2.png, rain-night.png &hellip;); one is picked '
                     . 'per entry and stays the same on reload. If no matching image exists, the '
-                    . 'localized condition text is shown instead.',
-                'text', 'images/rpgcalendar/weather',
+                    . 'localized condition text is shown instead. The plugin ships a default '
+                    . 'icon set (one image per WMO weather code) in that folder.',
+                'text', 'inc/plugins/rpgcalendar/assets/weather',
+            ],
+            'windy_threshold' => [
+                'Windy threshold (km/h)',
+                'When generating real weather, a day whose maximum wind speed reaches this value '
+                    . '(km/h) is marked as "windy" instead of its weather code. 0 disables the '
+                    . 'windy override.',
+                'numeric', '40',
             ],
             'holiday_symbol' => [
                 'Holiday symbol',

@@ -115,12 +115,14 @@ Every play location exposes two calendars – **weather** and **holidays** – t
 3. **Holidays** – manual holidays (location, title, date, optional *every year*). Holidays
    also appear in the important-events table below the grid.
 
-**Weather icons:** set *Weather image directory* to a folder of images named after the
-condition (`clear`, `cloudy`, `fog`, `rain`, `snow`, `thunder` – e.g. `rain.png`). The plugin
-shows the matching image on the weather chip; if none is found it shows the condition text.
-For more variety you can add several images per condition with a dash suffix (`rain.png`,
-`rain-1.png`, `rain-2.png`, `rain-night.png`, …); one is picked per weather entry and stays
-stable on reload.
+**Weather icons:** each weather condition is a WMO weather code, so there is one image per
+code, named after the code (`0.svg`, `61.svg`, `95.svg`, … – e.g. `61.svg` for light rain).
+The plugin ships a default icon set in *Weather image directory* and shows the matching image
+on the weather chip; if none is found it shows the localized condition text. For more variety
+you can add several images per code with a dash suffix (`61.svg`, `61-1.svg`, `61-night.svg`,
+…); one is picked per weather entry and stays stable on reload. In addition to the codes there
+is a derived `windy` condition: when generating, a day whose maximum wind speed reaches the
+*Windy threshold* setting is marked `windy` (image `windy.svg`) instead of its weather code.
 **Holiday symbol:** set one symbol (emoji or image URL) shown in front of every holiday.
 
 In a day cell, weather is always shown on top, holidays below it, then the other events.
@@ -244,7 +246,8 @@ Path: **ACP → Configuration → Settings → RPG Calendar**
 | Birthday year range | For the native source only: max. distance from the real current year |
 | Minimum / Maximum year | Navigation and input limits |
 | Default year / month | Start view when opened without parameters; 0 = real today |
-| Weather image directory | Board-relative folder with weather images named after the condition slug (`clear`, `cloudy`, `fog`, `rain`, `snow`, `thunder`) |
+| Weather image directory | Board-relative folder with weather images named after the WMO weather code (`0.svg` … `99.svg`, plus `windy.svg`). Ships with a default icon set |
+| Windy threshold (km/h) | When generating, a day with max wind speed ≥ this value is marked `windy` instead of its weather code (0 = off) |
 | Holiday symbol | One symbol for all holidays: an emoji/short text or an image URL |
 | Show missing-data hint | Show the "please add data" hint for fictional locations without data |
 | Team groups | User groups whose members may create forum-wide events from the day view. Everyone else can only create personal events and invite individual members. Empty = only admins publish forum-wide events |

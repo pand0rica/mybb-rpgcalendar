@@ -302,10 +302,13 @@ foreach ($feb29_starts as $n) {
 }
 check('yearly Feb-29 has no occurrence in non-leap 2025', false, $feb29_in_2025);
 
-echo "== Weather code mapping ==\n";
-foreach ([[0, 'clear'], [2, 'cloudy'], [48, 'fog'], [61, 'rain'], [80, 'rain'], [73, 'snow'], [86, 'snow'], [95, 'thunder']] as $t) {
-    check('WMO ' . $t[0] . ' => ' . $t[1], $t[1], Rpgcalendar_Generator::weatherSlug($t[0]));
-}
+echo "== Weather condition slugs ==\n";
+check('weatherCodes has the 28 WMO codes', 28, count(Rpgcalendar_Generator::weatherCodes()));
+$slugs = Rpgcalendar_Generator::conditionSlugs();
+check('conditionSlugs = 28 codes + windy', 29, count($slugs));
+check('conditionSlugs contains code 61', true, in_array('61', $slugs, true));
+check('conditionSlugs contains code 99', true, in_array('99', $slugs, true));
+check('conditionSlugs contains windy', true, in_array('windy', $slugs, true));
 
 echo "== Weather / holiday placement ==\n";
 $extra = [

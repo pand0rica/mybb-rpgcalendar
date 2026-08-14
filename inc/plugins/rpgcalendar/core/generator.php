@@ -76,10 +76,37 @@ class Rpgcalendar_Generator
         return 'cloudy';
     }
 
-    /** All condition slugs the generator can emit (for docs/UI). @return string[] */
+    /** The WMO weather interpretation codes Open-Meteo emits. @return int[] */
+    public static function weatherCodes(): array
+    {
+        return [
+            0, 1, 2, 3, 45, 48, 51, 53, 55, 56, 57, 61, 63, 65, 66, 67,
+            71, 73, 75, 77, 80, 81, 82, 85, 86, 95, 96, 99,
+        ];
+    }
+
+    /**
+     * All condition slugs the generator can emit and that the UI offers: the raw
+     * WMO codes (one image per code, e.g. "61") plus the derived "windy".
+     *
+     * @return string[]
+     */
     public static function conditionSlugs(): array
     {
-        return ['clear', 'cloudy', 'fog', 'rain', 'snow', 'thunder'];
+        $slugs = array_map('strval', self::weatherCodes());
+        $slugs[] = 'windy';
+
+        return $slugs;
+    }
+
+    /** Windy override threshold (km/h) from the setting, default 40. */
+    private static function windyThreshold(): float
+    {
+        global $mybb;
+
+        $t = (float)($mybb->settings['rpgcalendar_windy_threshold'] ?? 40);
+
+        return $t > 0 ? $t : 40.0;
     }
 
     // -------------------------------------------------------------------
@@ -267,7 +294,7 @@ class Rpgcalendar_Generator
         $url = $base . '?latitude=' . rawurlencode((string)$lat)
             . '&longitude=' . rawurlencode((string)$lon)
             . '&start_date=' . $start . '&end_date=' . $end
-            . '&daily=weathercode,temperature_2m_max,temperature_2m_min&timezone=UTC';
+            . '&daily=weathercode,temperature_2m_max,temperature_2m_min,windspeed_10m_max&timezone=UTC';
 
         $data = $this->getJson($url);
         if (!is_array($data) || empty($data['daily']['time'])) {
@@ -280,6 +307,8 @@ class Rpgcalendar_Generator
         $codes = isset($daily['weathercode']) && is_array($daily['weathercode']) ? $daily['weathercode'] : [];
         $tmax  = isset($daily['temperature_2m_max']) && is_array($daily['temperature_2m_max']) ? $daily['temperature_2m_max'] : [];
         $tmin  = isset($daily['temperature_2m_min']) && is_array($daily['temperature_2m_min']) ? $daily['temperature_2m_min'] : [];
+        $wind  = isset($daily['windspeed_10m_max']) && is_array($daily['windspeed_10m_max']) ? $daily['windspeed_10m_max'] : [];
+        $windy = self::windyThreshold();
 
         $out = [];
         foreach ($daily['time'] as $i => $iso) {
@@ -287,10 +316,14 @@ class Rpgcalendar_Generator
             if ($ymd === null) {
                 continue;
             }
-            $code = isset($codes[$i]) ? (int)$codes[$i] : 0;
+            // One slug per WMO code (image "<code>.svg"); strong wind overrides it.
+            $slug = (string)(isset($codes[$i]) ? (int)$codes[$i] : 0);
+            if (isset($wind[$i]) && is_numeric($wind[$i]) && (float)$wind[$i] >= $windy) {
+                $slug = 'windy';
+            }
             $out[] = [
                 'y'    => $ymd['y'], 'm' => $ymd['m'], 'd' => $ymd['d'],
-                'slug' => self::weatherSlug($code),
+                'slug' => $slug,
                 'note' => self::formatTempNote($tmin[$i] ?? null, $tmax[$i] ?? null),
             ];
         }
@@ -345,21 +378,21 @@ class Rpgcalendar_Generator
         return $out;
     }
 
-    /** Coarse condition from a daily mean temperature and precipitation sum. */
+    /** Coarse WMO code from a daily mean temperature and precipitation sum. */
     private static function climateSlug(?float $mean, float $precip): string
     {
         if ($precip >= 5.0) {
             if ($mean !== null && $mean <= 0.5) {
-                return 'snow';
+                return '73'; // moderate snow
             }
 
-            return 'rain';
+            return '63'; // moderate rain
         }
         if ($precip >= 0.5) {
-            return 'cloudy';
+            return '3'; // overcast
         }
 
-        return 'clear';
+        return '0'; // clear sky
     }
 
     private static function formatTempNote($min, $max): string
