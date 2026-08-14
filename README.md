@@ -118,6 +118,9 @@ Every play location exposes two calendars – **weather** and **holidays** – t
 **Weather icons:** set *Weather image directory* to a folder of images named after the
 condition (`clear`, `cloudy`, `fog`, `rain`, `snow`, `thunder` – e.g. `rain.png`). The plugin
 shows the matching image on the weather chip; if none is found it shows the condition text.
+For more variety you can add several images per condition with a dash suffix (`rain.png`,
+`rain-1.png`, `rain-2.png`, `rain-night.png`, …); one is picked per weather entry and stays
+stable on reload.
 **Holiday symbol:** set one symbol (emoji or image URL) shown in front of every holiday.
 
 In a day cell, weather is always shown on top, holidays below it, then the other events.

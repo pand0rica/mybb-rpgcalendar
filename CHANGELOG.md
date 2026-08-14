@@ -18,8 +18,10 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
   "My calendars" page like any other calendar (no separate toggle). Weather sits above
   holidays in a day cell; holidays also appear in the important-events table.
 - Weather chips show an image from a configurable directory (matched by condition slug) with a
-  text fallback; one configurable symbol precedes every holiday. Weather and holiday chips are
-  clickable and open a small detail page with a short, localized description.
+  text fallback; several variant images per condition are supported via a dash suffix
+  (rain.png, rain-1.png, …) and one is picked deterministically per entry. One configurable
+  symbol precedes every holiday. Weather and holiday chips are clickable and open a small
+  detail page with a short, localized description.
 - Month-text pre-fill in the ACP: generate a suggested month text from a location's weather and
   holidays, then edit and save it.
 - Generated holidays use the country's local name (e.g. German for `DE`); the English name is

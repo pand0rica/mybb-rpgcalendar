@@ -414,6 +414,7 @@ class Rpgcalendar_Engine
                 'source'       => 'weather',
                 'title'        => '',
                 'condition'    => (string)$row['wcondition'],
+                'wid'          => (int)$row['wid'],
                 'note'         => (string)$row['note'],
                 'description'  => '',
                 'url'          => 'rpgcalendar.php?action=weatherinfo&wid=' . (int)$row['wid']

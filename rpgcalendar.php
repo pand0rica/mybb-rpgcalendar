@@ -53,36 +53,70 @@ function rpgcalendar_weather_label(string $slug): string
 }
 
 /**
- * Symbol markup for a weather condition: an <img> from the configured image
- * directory if a matching file exists, otherwise an empty string (the caller
- * then shows the text label). Result cached per slug. Includes a trailing space.
+ * All image URLs for a weather condition, keyed by slug. A condition may have
+ * several variant images: the base name (e.g. rain.png) plus dash-suffixed
+ * variants (rain-1.png, rain-2.png, rain-night.png, …). The image directory is
+ * scanned once per request. @return array slug => string[] (sorted URLs)
  */
-function rpgcalendar_weather_symbol(string $slug, string $label): string
+function rpgcalendar_weather_images(): array
 {
     global $mybb;
-    static $cache = [];
+    static $variants = null;
 
-    $slug = preg_replace('/[^a-z0-9_-]/', '', strtolower($slug));
+    if ($variants !== null) {
+        return $variants;
+    }
+
+    $variants = [];
+    $dir = isset($mybb->settings['rpgcalendar_weather_imagedir'])
+        ? trim((string)$mybb->settings['rpgcalendar_weather_imagedir']) : '';
+    $dir = trim($dir, '/');
+    $abs = MYBB_ROOT . $dir;
+    if ($dir === '' || !is_dir($abs)) {
+        return $variants;
+    }
+
+    $exts = ['png', 'gif', 'jpg', 'jpeg', 'svg', 'webp'];
+    foreach ((array)scandir($abs) as $file) {
+        // base "slug" up to an optional "-variant" suffix, then the extension
+        if (!preg_match('/^([a-z0-9_]+)(?:-[^.]+)?\.([a-z0-9]+)$/i', $file, $m)) {
+            continue;
+        }
+        if (!in_array(strtolower($m[2]), $exts, true)) {
+            continue;
+        }
+        $variants[strtolower($m[1])][] = $mybb->settings['bburl'] . '/' . $dir . '/' . $file;
+    }
+    foreach ($variants as &$list) {
+        sort($list); // stable order so the seed picks the same file every time
+    }
+    unset($list);
+
+    return $variants;
+}
+
+/**
+ * <img> markup for a weather condition. If several variant images exist for the
+ * slug, one is picked deterministically from $seed (so the same entry always
+ * shows the same image). Empty string if no image exists (caller shows text).
+ * Includes a trailing space.
+ */
+function rpgcalendar_weather_symbol(string $slug, string $label, int $seed = 0): string
+{
+    $slug = preg_replace('/[^a-z0-9_]/', '', strtolower($slug));
     if ($slug === '') {
         return '';
     }
-    if (!isset($cache[$slug])) {
-        $dir = isset($mybb->settings['rpgcalendar_weather_imagedir'])
-            ? trim((string)$mybb->settings['rpgcalendar_weather_imagedir']) : '';
-        $dir = trim($dir, '/');
-        $cache[$slug] = '';
-        if ($dir !== '') {
-            foreach (['png', 'gif', 'jpg', 'jpeg', 'svg', 'webp'] as $ext) {
-                if (file_exists(MYBB_ROOT . $dir . '/' . $slug . '.' . $ext)) {
-                    $src = htmlspecialchars_uni($mybb->settings['bburl'] . '/' . $dir . '/' . $slug . '.' . $ext);
-                    $cache[$slug] = '<img src="' . $src . '" alt="%ALT%" title="%ALT%" class="rpgcalendar_wicon" /> ';
-                    break;
-                }
-            }
-        }
+    $images = rpgcalendar_weather_images();
+    if (empty($images[$slug])) {
+        return '';
     }
 
-    return $cache[$slug] === '' ? '' : str_replace('%ALT%', htmlspecialchars_uni($label), $cache[$slug]);
+    $list = $images[$slug];
+    $src  = htmlspecialchars_uni($list[abs($seed) % count($list)]);
+    $alt  = htmlspecialchars_uni($label);
+
+    return '<img src="' . $src . '" alt="' . $alt . '" title="' . $alt . '" class="rpgcalendar_wicon" /> ';
 }
 
 /** Markup for the single global holiday symbol (image URL or emoji/text). */
@@ -377,7 +411,7 @@ if ($rpgcalendar_action === 'day') {
         if (($event['source'] ?? '') === 'weather') {
             $wlabel = rpgcalendar_weather_label((string)$event['condition']);
             $wnote  = (string)($event['note'] ?? '');
-            $title_text = rpgcalendar_weather_symbol((string)$event['condition'], $wlabel)
+            $title_text = rpgcalendar_weather_symbol((string)$event['condition'], $wlabel, (int)($event['wid'] ?? 0))
                 . htmlspecialchars_uni(trim($wlabel . ($wnote !== '' ? ', ' . $wnote : '')));
         } elseif (($event['source'] ?? '') === 'holiday') {
             $title_text = rpgcalendar_holiday_symbol() . $title_text;
@@ -1292,7 +1326,7 @@ if ($rpgcalendar_action === 'weatherinfo' || $rpgcalendar_action === 'holidayinf
     if ($is_weather) {
         $label             = rpgcalendar_weather_label((string)$row['wcondition']);
         $event_title_plain = $label;
-        $event_title       = rpgcalendar_weather_symbol((string)$row['wcondition'], $label) . htmlspecialchars_uni($label);
+        $event_title       = rpgcalendar_weather_symbol((string)$row['wcondition'], $label, (int)$row['wid']) . htmlspecialchars_uni($label);
         if ($locname !== '') {
             $parts[] = $lang->sprintf($lang->rpgcalendar_weather_in, $locname);
         }
@@ -1470,7 +1504,7 @@ foreach ($month_data['grid'] as $week) {
             if ($event_source === 'weather') {
                 $wlabel = rpgcalendar_weather_label((string)$event['condition']);
                 $wnote  = (string)($event['note'] ?? '');
-                $event_symbol = rpgcalendar_weather_symbol((string)$event['condition'], $wlabel);
+                $event_symbol = rpgcalendar_weather_symbol((string)$event['condition'], $wlabel, (int)($event['wid'] ?? 0));
                 $visible_text = ($wnote !== '') ? $wnote : (($event_symbol === '') ? $wlabel : '');
                 $event_title  = htmlspecialchars_uni($visible_text);
                 $tip = $wlabel . ($wnote !== '' ? ', ' . $wnote : '');

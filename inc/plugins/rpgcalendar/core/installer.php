@@ -423,8 +423,11 @@ class Rpgcalendar_Installer
                     . '(e.g. images/rpgcalendar/weather). The plugin looks for a file named '
                     . 'after the weather condition with a .png, .gif, .jpg, .jpeg, .svg or .webp '
                     . 'extension. The possible condition names are: clear (sunny), cloudy, fog, '
-                    . 'rain, snow, thunder (thunderstorm) &ndash; e.g. rain.png. If no matching '
-                    . 'image exists, the localized condition text is shown instead.',
+                    . 'rain, snow, thunder (thunderstorm) &ndash; e.g. rain.png. For more variety '
+                    . 'you can add several images per condition using a dash suffix '
+                    . '(rain.png, rain-1.png, rain-2.png, rain-night.png &hellip;); one is picked '
+                    . 'per entry and stays the same on reload. If no matching image exists, the '
+                    . 'localized condition text is shown instead.',
                 'text', 'images/rpgcalendar/weather',
             ],
             'holiday_symbol' => [
