@@ -27,6 +27,7 @@ class Rpgcalendar_Generator
     const FORECAST_URL = 'https://api.open-meteo.com/v1/forecast';
     const CLIMATE_URL  = 'https://climate-api.open-meteo.com/v1/climate';
     const HOLIDAY_URL  = 'https://date.nager.at/api/v3/PublicHolidays';
+    const WIKI_API     = 'https://%s.wikipedia.org/w/api.php';
 
     /** Climate model used for the long-range fallback. */
     const CLIMATE_MODEL = 'MRI_AGCM3_2_S';
@@ -36,6 +37,9 @@ class Rpgcalendar_Generator
 
     /** @var string[] Human-readable errors collected during a generate run. */
     private $errors = [];
+
+    /** @var array Wikipedia lookups cached per generate run ("lang|name" => result|null). */
+    private $wikiCache = [];
 
     public function __construct($database)
     {
@@ -436,6 +440,8 @@ class Rpgcalendar_Generator
             return [];
         }
 
+        $lang = $this->wikiLang();
+
         $out = [];
         foreach ($data as $entry) {
             if (!is_array($entry) || empty($entry['date'])) {
@@ -445,23 +451,193 @@ class Rpgcalendar_Generator
             if ($ymd === null) {
                 continue;
             }
-            // Prefer localName (the holiday's name in the country's own language,
-            // e.g. German for DE); the English "name" is intentionally not stored
-            // so generated holidays stay in the local/MyBB language.
             $local = isset($entry['localName']) ? trim((string)$entry['localName']) : '';
             $name  = isset($entry['name']) ? trim((string)$entry['name']) : '';
             $title = ($local !== '') ? $local : $name;
             if ($title === '') {
                 continue;
             }
+
+            // Translate the name and fetch a short explanation from Wikipedia in
+            // the board's language. The English name is the best search query.
+            $desc  = '';
+            $query = ($name !== '') ? $name : $title;
+            $wiki  = $this->wikiLookup($lang, $query);
+            if ($wiki !== null) {
+                if ($wiki['title'] !== '') {
+                    $title = $wiki['title'];
+                }
+                if ($wiki['extract'] !== '') {
+                    $desc = self::trimExtract($wiki['extract']);
+                }
+            }
+
+            // Public = statutory day off (from Nager's "types").
+            $types  = isset($entry['types']) && is_array($entry['types']) ? $entry['types'] : [];
+            $public = in_array('Public', $types, true);
+            $line   = self::workfreeLine($lang, $public);
+            $desc   = trim($desc . ($desc !== '' ? "\n\n" : '') . $line);
+
             $out[] = [
                 'y' => $ymd['y'], 'm' => $ymd['m'], 'd' => $ymd['d'],
                 'title' => my_substr($title, 0, 200),
-                'description' => '',
+                'description' => $desc,
             ];
         }
 
         return $out;
+    }
+
+    // -------------------------------------------------------------------
+    // Wikipedia enrichment (localized name + short description)
+    // -------------------------------------------------------------------
+
+    /** Wikipedia language edition derived from the board's default language. */
+    private function wikiLang(): string
+    {
+        global $mybb;
+
+        return self::wikiLangFromBoard((string)($mybb->settings['bblanguage'] ?? 'english'));
+    }
+
+    /** Maps a MyBB language pack name (e.g. "deutsch_du") to a Wikipedia code. */
+    public static function wikiLangFromBoard(string $bblanguage): string
+    {
+        $b = strtolower(trim($bblanguage));
+
+        static $map = [
+            'deutsch'    => 'de', 'english'  => 'en', 'francais' => 'fr',
+            'espanol'    => 'es', 'italiano' => 'it', 'nederlands' => 'nl',
+            'portugues'  => 'pt', 'polski'   => 'pl', 'russian'  => 'ru',
+            'svenska'    => 'sv', 'suomi'    => 'fi', 'turkce'   => 'tr',
+            'cesky'      => 'cs', 'dansk'    => 'da', 'norsk'    => 'no',
+        ];
+        foreach ($map as $prefix => $code) {
+            if (strpos($b, $prefix) === 0) {
+                return $code;
+            }
+        }
+
+        $b = preg_replace('/[^a-z]/', '', $b);
+
+        return (strlen($b) >= 2) ? substr($b, 0, 2) : 'en';
+    }
+
+    /**
+     * Resolves a holiday name to a localized title + intro extract. Cached per
+     * run. For non-English targets it searches the ENGLISH Wikipedia (where the
+     * English holiday name matches cleanly), follows the langlink to the target
+     * language and fetches that page's extract – far more accurate than searching
+     * the target Wikipedia with an English query. Returns null if no target-
+     * language article exists (caller then keeps the original name).
+     *
+     * @return array|null ['title','extract']
+     */
+    private function wikiLookup(string $lang, string $query): ?array
+    {
+        $query = trim($query);
+        if ($query === '' || !preg_match('/^[a-z]{2,3}$/', $lang)) {
+            return null;
+        }
+        $key = $lang . '|' . strtolower($query);
+        if (array_key_exists($key, $this->wikiCache)) {
+            return $this->wikiCache[$key];
+        }
+
+        $res = ($lang === 'en')
+            ? $this->wikiExtractBySearch('en', $query)
+            : $this->wikiViaEnglish($lang, $query);
+
+        $this->wikiCache[$key] = $res;
+
+        return $res;
+    }
+
+    /** Top search match on a Wikipedia edition + its intro extract. @return array|null */
+    private function wikiExtractBySearch(string $lang, string $query): ?array
+    {
+        $url = sprintf(self::WIKI_API, $lang)
+            . '?action=query&format=json&redirects=1&prop=extracts&exintro=1&explaintext=1'
+            . '&generator=search&gsrnamespace=0&gsrlimit=1&gsrsearch=' . rawurlencode($query);
+
+        $data = $this->getJson($url);
+        if (!is_array($data) || empty($data['query']['pages']) || !is_array($data['query']['pages'])) {
+            return null;
+        }
+        $page = reset($data['query']['pages']);
+        if (!is_array($page) || !isset($page['title'])) {
+            return null;
+        }
+
+        return [
+            'title'   => trim((string)$page['title']),
+            'extract' => isset($page['extract']) ? trim((string)$page['extract']) : '',
+        ];
+    }
+
+    /** English article (by search) -> target-language langlink -> target extract. @return array|null */
+    private function wikiViaEnglish(string $lang, string $query): ?array
+    {
+        $url = 'https://en.wikipedia.org/w/api.php'
+            . '?action=query&format=json&redirects=1&generator=search&gsrnamespace=0&gsrlimit=1'
+            . '&gsrsearch=' . rawurlencode($query)
+            . '&prop=langlinks&lllang=' . $lang . '&lllimit=1';
+
+        $data = $this->getJson($url);
+        if (!is_array($data) || empty($data['query']['pages']) || !is_array($data['query']['pages'])) {
+            return null;
+        }
+        $page = reset($data['query']['pages']);
+        if (!is_array($page) || empty($page['langlinks'][0]['*'])) {
+            return null; // no article in the target language
+        }
+        $target_title = trim((string)$page['langlinks'][0]['*']);
+        if ($target_title === '') {
+            return null;
+        }
+
+        $url2 = sprintf(self::WIKI_API, $lang)
+            . '?action=query&format=json&redirects=1&prop=extracts&exintro=1&explaintext=1'
+            . '&titles=' . rawurlencode($target_title);
+        $data2   = $this->getJson($url2);
+        $extract = '';
+        if (is_array($data2) && !empty($data2['query']['pages']) && is_array($data2['query']['pages'])) {
+            $p2 = reset($data2['query']['pages']);
+            if (is_array($p2) && isset($p2['extract'])) {
+                $extract = trim((string)$p2['extract']);
+            }
+        }
+
+        return ['title' => $target_title, 'extract' => $extract];
+    }
+
+    /** Shortens a Wikipedia extract to a couple of sentences (~600 chars). */
+    private static function trimExtract(string $s): string
+    {
+        $s = trim(preg_replace('/\s+/', ' ', $s));
+        if (my_strlen($s) <= 600) {
+            return $s;
+        }
+        $cut = my_substr($s, 0, 600);
+        $dot = strrpos($cut, '. ');
+        if ($dot !== false && $dot > 200) {
+            $cut = substr($cut, 0, $dot + 1);
+        }
+
+        return trim($cut) . ' …';
+    }
+
+    /** One-line "is it a day off" note in the target language (falls back to English). */
+    private static function workfreeLine(string $lang, bool $public): string
+    {
+        static $t = [
+            'de' => ['Gesetzlicher Feiertag (arbeitsfrei).', 'Kein gesetzlicher Feiertag (regulärer Arbeitstag).'],
+            'en' => ['Public holiday (a day off).', 'Not a public holiday (a regular working day).'],
+            'fr' => ['Jour férié (chômé).', 'Pas un jour férié (jour ouvrable).'],
+        ];
+        $m = $t[$lang] ?? $t['en'];
+
+        return $public ? $m[0] : $m[1];
     }
 
     // -------------------------------------------------------------------

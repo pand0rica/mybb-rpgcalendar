@@ -1337,11 +1337,11 @@ if ($rpgcalendar_action === 'weatherinfo' || $rpgcalendar_action === 'holidayinf
     } else {
         $event_title_plain = (string)$row['title'];
         $event_title       = rpgcalendar_holiday_symbol() . htmlspecialchars_uni((string)$row['title']);
+        if (trim((string)$row['description']) !== '') {
+            $parts[] = nl2br(htmlspecialchars_uni((string)$row['description']));
+        }
         if ($locname !== '') {
             $parts[] = $lang->sprintf($lang->rpgcalendar_holiday_in, $locname);
-        }
-        if (trim((string)$row['description']) !== '') {
-            $parts[] = htmlspecialchars_uni((string)$row['description']);
         }
     }
     $event_description   = $parts ? '<p>' . implode('</p><p>', $parts) . '</p>' : '';

@@ -113,7 +113,9 @@ Every play location exposes two calendars – **weather** and **holidays** – t
    pattern, optional note). Generated entries appear here too and can be edited (editing one
    converts it to a manual entry so the next *Generate* keeps it).
 3. **Holidays** – manual holidays (location, title, date, optional *every year*). Holidays
-   also appear in the important-events table below the grid.
+   also appear in the important-events table below the grid. Generated holidays are translated
+   to the board's default language and get a short Wikipedia description plus a note whether it
+   is a statutory day off (all editable afterwards).
 
 **Weather icons:** each weather condition is a WMO weather code, so there is one image per
 code, named after the code (`0.svg`, `61.svg`, `95.svg`, … – e.g. `61.svg` for light rain).
@@ -134,8 +136,10 @@ Weather and holiday chips are clickable and open a small detail page with a shor
 For real locations the server makes outbound HTTPS requests **only when you click Generate**
 (never on a normal page view): to **Open-Meteo** (`open-meteo.com`) for weather and
 **Nager.Date** (`date.nager.at`) for public holidays, plus Open-Meteo geocoding to turn a city
-into coordinates. Only the location data you entered (city, country, coordinates) is sent – no
-member data. Both services are free and need no API key. Because real weather only exists for
+into coordinates, plus **Wikipedia** (`<lang>.wikipedia.org`, in the board's default language)
+to translate each holiday's name and fetch a short description. Only the location data you
+entered (city, country, coordinates) and the holiday names are sent – no member data. All
+services are free and need no API key. Because real weather only exists for
 real dates, weather uses the archive for past days, the forecast for the next ~16 days, and
 climate normals further out; the in-game calendar date is treated as the real date.
 

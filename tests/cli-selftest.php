@@ -310,6 +310,13 @@ check('conditionSlugs contains code 61', true, in_array('61', $slugs, true));
 check('conditionSlugs contains code 99', true, in_array('99', $slugs, true));
 check('conditionSlugs contains windy', true, in_array('windy', $slugs, true));
 
+echo "== Wikipedia language mapping ==\n";
+check('deutsch_du => de', 'de', Rpgcalendar_Generator::wikiLangFromBoard('deutsch_du'));
+check('english => en', 'en', Rpgcalendar_Generator::wikiLangFromBoard('english'));
+check('francais => fr', 'fr', Rpgcalendar_Generator::wikiLangFromBoard('francais'));
+check('nederlands => nl', 'nl', Rpgcalendar_Generator::wikiLangFromBoard('nederlands'));
+check('unknown => first two letters', 'xy', Rpgcalendar_Generator::wikiLangFromBoard('xyzzy'));
+
 echo "== Weather / holiday placement ==\n";
 $extra = [
     'locations' => [make_location(1, 0)],

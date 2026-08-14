@@ -171,7 +171,7 @@ class Rpgcalendar_Installer
             `locid`       INT UNSIGNED NOT NULL DEFAULT 0,
             `source`      VARCHAR(10) NOT NULL DEFAULT 'manual',
             `title`       VARCHAR(200) NOT NULL DEFAULT '',
-            `description` VARCHAR(255) NOT NULL DEFAULT '',
+            `description` TEXT NOT NULL,
             `start_year`  SMALLINT NOT NULL DEFAULT 0,
             `start_month` TINYINT UNSIGNED NOT NULL DEFAULT 1,
             `start_day`   TINYINT UNSIGNED NOT NULL DEFAULT 1,
@@ -211,6 +211,20 @@ class Rpgcalendar_Installer
         if (!$db->field_exists('joinable', 'rpgcalendar_calendars')) {
             $db->add_column('rpgcalendar_calendars', 'joinable',
                 "TINYINT(1) NOT NULL DEFAULT 0 AFTER `type`");
+        }
+
+        // v1.2: holiday descriptions hold a short Wikipedia explanation -> TEXT.
+        if ($db->table_exists('rpgcalendar_holidays')) {
+            $needs = true;
+            foreach ($db->show_fields_from('rpgcalendar_holidays') as $field) {
+                if (strtolower((string)$field['Field']) === 'description') {
+                    $needs = (stripos((string)$field['Type'], 'text') === false);
+                    break;
+                }
+            }
+            if ($needs) {
+                $db->modify_column('rpgcalendar_holidays', 'description', 'TEXT NOT NULL');
+            }
         }
 
         self::migrateEventsToCalendars();
