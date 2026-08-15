@@ -127,7 +127,9 @@ you can add several images per code with a dash suffix (`61.svg`, `61-1.svg`, `6
 …); one is picked per weather entry and stays stable on reload. In addition to the codes there
 is a derived `windy` condition: when generating, a day whose maximum wind speed reaches the
 *Windy threshold* setting is marked `windy` (image `windy.svg`) instead of its weather code.
-**Holiday symbol:** set one symbol (emoji or image URL) shown in front of every holiday.
+**Holiday symbol:** set one symbol (emoji or image URL) shown in front of every holiday. Ships
+with a default calendar-star icon (`inc/plugins/rpgcalendar/assets/holiday/calendar-star.svg`)
+drawn to match the weather icon set.
 
 In a day cell, weather is always shown on top, holidays below it, then the other events.
 Weather and holiday chips are clickable and open a small detail page with a short description
@@ -255,7 +257,7 @@ Path: **ACP → Configuration → Settings → RPG Calendar**
 | Default year / month | Start view when opened without parameters; 0 = real today |
 | Weather image directory | Board-relative folder with weather images named after the WMO weather code (`0.svg` … `99.svg`, plus `windy.svg`). Ships with a default icon set |
 | Windy threshold (km/h) | When generating, a day with max wind speed ≥ this value is marked `windy` instead of its weather code (0 = off) |
-| Holiday symbol | One symbol for all holidays: an emoji/short text or an image URL |
+| Holiday symbol | One symbol for all holidays: an emoji/short text or an image URL. Ships with a default calendar-star icon that matches the weather set |
 | Enrich generated holidays with Wikipedia | Translate generated holiday names and add a short description + article link from Wikipedia. Off = plain name and day-off note only |
 | Show missing-data hint | Show the "please add data" hint for fictional locations without data |
 | Team groups | User groups whose members may create forum-wide events from the day view. Everyone else can only create personal events and invite individual members. Empty = only admins publish forum-wide events |

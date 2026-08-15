@@ -22,7 +22,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
   an image named after the code (`61.svg`, …) from a configurable directory with a localized
   text fallback; several variant images per code are supported via a dash suffix
   (`61-1.svg`, …) and one is picked deterministically per entry. A default icon set ships with
-  the plugin. One configurable symbol precedes every holiday. Weather and holiday chips are
+  the plugin. One configurable symbol precedes every holiday; it defaults to a bundled
+  calendar-star icon drawn to match the weather set. Weather and holiday chips are
   clickable and open a small detail page with a short, localized description.
 - Month-text pre-fill in the ACP: generate a suggested month text from a location's weather and
   holidays, then edit and save it.

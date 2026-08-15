@@ -462,8 +462,9 @@ class Rpgcalendar_Installer
             ],
             'holiday_symbol' => [
                 'Holiday symbol',
-                'One symbol shown in front of every holiday. Either an emoji/short text or an image URL (a value containing a slash or ending in .png/.gif/.jpg/.svg is rendered as an image).',
-                'text', '',
+                'One symbol shown in front of every holiday. Either an emoji/short text or an image URL (a value containing a slash or ending in .png/.gif/.jpg/.svg is rendered as an image). '
+                    . 'Defaults to the calendar-star icon shipped with the plugin, which matches the weather icon set.',
+                'text', 'inc/plugins/rpgcalendar/assets/holiday/calendar-star.svg',
             ],
             'holiday_wiki' => [
                 'Enrich generated holidays with Wikipedia',
