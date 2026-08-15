@@ -1337,15 +1337,32 @@ if ($rpgcalendar_action === 'weatherinfo' || $rpgcalendar_action === 'holidayinf
     } else {
         $event_title_plain = (string)$row['title'];
         $event_title       = rpgcalendar_holiday_symbol() . htmlspecialchars_uni((string)$row['title']);
-        if (trim((string)$row['description']) !== '') {
-            $parts[] = nl2br(htmlspecialchars_uni((string)$row['description']));
-        }
+
         // Link to the full Wikipedia article (replaces the trimmed "…" dead-end).
-        $wiki_url = trim((string)($row['url'] ?? ''));
+        $wiki_url  = trim((string)($row['url'] ?? ''));
+        $link_html = '';
         if ($wiki_url !== '' && (strpos($wiki_url, 'https://') === 0 || strpos($wiki_url, 'http://') === 0)) {
-            $parts[] = '<a href="' . htmlspecialchars_uni($wiki_url) . '" target="_blank" rel="noopener noreferrer nofollow">'
+            $link_html = '<a href="' . htmlspecialchars_uni($wiki_url) . '" target="_blank" rel="noopener noreferrer nofollow">'
                 . $lang->rpgcalendar_wiki_more . '</a>';
         }
+
+        // The description holds the Wikipedia extract followed by the day-off note
+        // (blank-line separated). Put the article link right after the extract,
+        // i.e. before that note.
+        $desc = trim((string)$row['description']);
+        if ($desc !== '') {
+            $blocks  = preg_split('/\n\n+/', $desc);
+            $parts[] = nl2br(htmlspecialchars_uni(array_shift($blocks)));
+            if ($link_html !== '') {
+                $parts[] = $link_html;
+            }
+            foreach ($blocks as $block) {
+                $parts[] = nl2br(htmlspecialchars_uni($block));
+            }
+        } elseif ($link_html !== '') {
+            $parts[] = $link_html;
+        }
+
         if ($locname !== '') {
             $parts[] = $lang->sprintf($lang->rpgcalendar_holiday_in, $locname);
         }
