@@ -375,11 +375,17 @@ check('javascript: url stripped', '', is_array($js) ? $js['url'] : null);
 echo "== Database round trip ==\n";
 if ($db->table_exists('rpgcalendar_events')) {
     $store = new Rpgcalendar_Database();
+    // v1.1+: events are only visible through a calendar the viewer may access.
+    // Assign the test event to a public global calendar so the guest (uid 0)
+    // overlap query below can see it.
+    $guest_cids = $store->getViewerAccessCids(0);
+    $test_cid   = $guest_cids ? (int)$guest_cids[0] : 0;
     $eid = $store->saveEvent([
         'title' => 'SELFTEST ' . TIME_NOW, 'description' => 'selftest row',
         'start_year' => 1247, 'start_month' => 3, 'start_day' => 12,
         'end_year' => 1247, 'end_month' => 3, 'end_day' => 14,
         'repeat_type' => 0, 'important' => 1, 'visible' => 1, 'uid' => 0,
+        'calendar_id' => $test_cid,
     ]);
     check('saveEvent returns id', true, $eid > 0);
 
