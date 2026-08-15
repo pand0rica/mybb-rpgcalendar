@@ -120,9 +120,10 @@
 
 /* Weather/holiday chip icon */
 .rpgcalendar_wicon {
-    height: 1.1em;
+    height: 1.9em;
     width: auto;
-    vertical-align: -0.15em;
+    margin: -0.4em 1px -0.4em -2px;
+    vertical-align: middle;
 }
 
 /* Missing-data hint (fictional locations) */
