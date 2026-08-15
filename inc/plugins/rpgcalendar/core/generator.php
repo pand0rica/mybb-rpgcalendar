@@ -29,6 +29,9 @@ class Rpgcalendar_Generator
     const HOLIDAY_URL  = 'https://date.nager.at/api/v3/PublicHolidays';
     const WIKI_API     = 'https://%s.wikipedia.org/w/api.php';
 
+    /** Descriptive User-Agent required by the Wikimedia APIs (T400119). */
+    const USER_AGENT   = 'rpgcalendar-MyBB/1.2 (+https://github.com/pand0rica/rpgcalendar)';
+
     /** Climate model used for the long-range fallback. */
     const CLIMATE_MODEL = 'MRI_AGCM3_2_S';
 
@@ -644,21 +647,53 @@ class Rpgcalendar_Generator
     // HTTP + date helpers
     // -------------------------------------------------------------------
 
-    /** GET a URL via MyBB's fetch_remote_file() and JSON-decode it. */
+    /** GET a URL body and JSON-decode it. */
     private function getJson(string $url)
     {
-        if (!function_exists('fetch_remote_file')) {
-            require_once MYBB_ROOT . 'inc/functions.php';
-        }
-
-        $body = @fetch_remote_file($url);
-        if ($body === false || $body === '') {
+        $body = $this->httpGet($url);
+        if ($body === null || $body === '') {
             return null;
         }
 
         $decoded = json_decode($body, true);
 
         return (json_last_error() === JSON_ERROR_NONE) ? $decoded : null;
+    }
+
+    /**
+     * Fetches a URL body. Prefers cURL so we can send a descriptive
+     * User-Agent: the Wikimedia APIs reject requests without one
+     * (see phabricator.wikimedia.org/T400119), and MyBB's fetch_remote_file()
+     * does not let us set request headers. Falls back to fetch_remote_file()
+     * when cURL is unavailable (fine for Open-Meteo / Nager.Date).
+     */
+    private function httpGet(string $url): ?string
+    {
+        if (function_exists('curl_init')) {
+            $ch = curl_init();
+            curl_setopt($ch, CURLOPT_URL, $url);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+            curl_setopt($ch, CURLOPT_MAXREDIRS, 5);
+            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 8);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 15);
+            curl_setopt($ch, CURLOPT_USERAGENT, self::USER_AGENT);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, ['Accept: application/json']);
+            $body = curl_exec($ch);
+            $code = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+            if ($body !== false && $body !== '' && $code >= 200 && $code < 300) {
+                return (string)$body;
+            }
+            // fall through and try fetch_remote_file() on any failure
+        }
+
+        if (!function_exists('fetch_remote_file')) {
+            require_once MYBB_ROOT . 'inc/functions.php';
+        }
+        $body = @fetch_remote_file($url);
+
+        return ($body === false || $body === '') ? null : (string)$body;
     }
 
     /** @return int|null day number for a positive-year date key */
