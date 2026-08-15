@@ -49,6 +49,7 @@ $l['rpgcalendar_holiday_in']       = "Feiertag in {1}.";
 $l['rpgcalendar_detail_condition'] = "Wetter:";
 $l['rpgcalendar_detail_temp']      = "Temperatur:";
 $l['rpgcalendar_detail_notfound']  = "Dieser Eintrag existiert nicht.";
+$l['rpgcalendar_wiki_more']        = "Ganzer Artikel auf Wikipedia &rarr;";
 
 $l['rpgcalendar_month_1']  = "Januar";
 $l['rpgcalendar_month_2']  = "Februar";

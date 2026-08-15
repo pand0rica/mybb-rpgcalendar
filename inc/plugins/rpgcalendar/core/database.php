@@ -1022,6 +1022,7 @@ class Rpgcalendar_Database
             'source'      => $this->db->escape_string((string)($data['source'] ?? 'manual')),
             'title'       => $this->db->escape_string((string)$data['title']),
             'description' => $this->db->escape_string((string)($data['description'] ?? '')),
+            'url'         => $this->db->escape_string((string)($data['url'] ?? '')),
             'start_year'  => (int)$data['start_year'],
             'start_month' => (int)$data['start_month'],
             'start_day'   => (int)$data['start_day'],

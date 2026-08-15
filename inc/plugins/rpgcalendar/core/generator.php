@@ -195,6 +195,7 @@ class Rpgcalendar_Generator
                         'source'      => 'auto',
                         'title'       => $h['title'],
                         'description' => $h['description'],
+                        'url'         => $h['url'] ?? '',
                         'start_year'  => $h['y'], 'start_month' => $h['m'], 'start_day' => $h['d'],
                         'end_year'    => $h['y'], 'end_month'   => $h['m'], 'end_day'   => $h['d'],
                         'yearly'      => 0,
@@ -426,7 +427,7 @@ class Rpgcalendar_Generator
     /**
      * Public holidays for one country and year.
      *
-     * @return array[] each ['y','m','d','title','description']
+     * @return array[] each ['y','m','d','title','description','url']
      */
     public function fetchHolidays(string $country, int $year): array
     {
@@ -443,7 +444,8 @@ class Rpgcalendar_Generator
             return [];
         }
 
-        $lang = $this->wikiLang();
+        $lang    = $this->wikiLang();
+        $wiki_on = $this->wikiEnabled();
 
         $out = [];
         foreach ($data as $entry) {
@@ -461,17 +463,22 @@ class Rpgcalendar_Generator
                 continue;
             }
 
-            // Translate the name and fetch a short explanation from Wikipedia in
-            // the board's language. The English name is the best search query.
-            $desc  = '';
-            $query = ($name !== '') ? $name : $title;
-            $wiki  = $this->wikiLookup($lang, $query);
-            if ($wiki !== null) {
-                if ($wiki['title'] !== '') {
-                    $title = $wiki['title'];
-                }
-                if ($wiki['extract'] !== '') {
-                    $desc = self::trimExtract($wiki['extract']);
+            // Translate the name and fetch a short explanation + article link from
+            // Wikipedia in the board's language (unless disabled by setting). The
+            // English name is the best search query.
+            $desc = '';
+            $link = '';
+            if ($wiki_on) {
+                $query = ($name !== '') ? $name : $title;
+                $wiki  = $this->wikiLookup($lang, $query);
+                if ($wiki !== null) {
+                    if ($wiki['title'] !== '') {
+                        $title = $wiki['title'];
+                    }
+                    if ($wiki['extract'] !== '') {
+                        $desc = self::trimExtract($wiki['extract']);
+                    }
+                    $link = (string)($wiki['url'] ?? '');
                 }
             }
 
@@ -485,6 +492,7 @@ class Rpgcalendar_Generator
                 'y' => $ymd['y'], 'm' => $ymd['m'], 'd' => $ymd['d'],
                 'title' => my_substr($title, 0, 200),
                 'description' => $desc,
+                'url' => my_substr($link, 0, 255),
             ];
         }
 
@@ -501,6 +509,16 @@ class Rpgcalendar_Generator
         global $mybb;
 
         return self::wikiLangFromBoard((string)($mybb->settings['bblanguage'] ?? 'english'));
+    }
+
+    /** Whether generated holidays should be enriched from Wikipedia (ACP setting). */
+    private function wikiEnabled(): bool
+    {
+        global $mybb;
+
+        // Default on when the setting is not present yet (fresh upgrade).
+        return !isset($mybb->settings['rpgcalendar_holiday_wiki'])
+            || (int)$mybb->settings['rpgcalendar_holiday_wiki'] === 1;
     }
 
     /** Maps a MyBB language pack name (e.g. "deutsch_du") to a Wikipedia code. */
@@ -534,7 +552,7 @@ class Rpgcalendar_Generator
      * the target Wikipedia with an English query. Returns null if no target-
      * language article exists (caller then keeps the original name).
      *
-     * @return array|null ['title','extract']
+     * @return array|null ['title','extract','url']
      */
     private function wikiLookup(string $lang, string $query): ?array
     {
@@ -560,7 +578,7 @@ class Rpgcalendar_Generator
     private function wikiExtractBySearch(string $lang, string $query): ?array
     {
         $url = sprintf(self::WIKI_API, $lang)
-            . '?action=query&format=json&redirects=1&prop=extracts&exintro=1&explaintext=1'
+            . '?action=query&format=json&redirects=1&prop=extracts|info&inprop=url&exintro=1&explaintext=1'
             . '&generator=search&gsrnamespace=0&gsrlimit=1&gsrsearch=' . rawurlencode($query);
 
         $data = $this->getJson($url);
@@ -575,6 +593,7 @@ class Rpgcalendar_Generator
         return [
             'title'   => trim((string)$page['title']),
             'extract' => isset($page['extract']) ? trim((string)$page['extract']) : '',
+            'url'     => isset($page['fullurl']) ? trim((string)$page['fullurl']) : '',
         ];
     }
 
@@ -600,18 +619,20 @@ class Rpgcalendar_Generator
         }
 
         $url2 = sprintf(self::WIKI_API, $lang)
-            . '?action=query&format=json&redirects=1&prop=extracts&exintro=1&explaintext=1'
+            . '?action=query&format=json&redirects=1&prop=extracts|info&inprop=url&exintro=1&explaintext=1'
             . '&titles=' . rawurlencode($target_title);
         $data2   = $this->getJson($url2);
         $extract = '';
+        $link    = '';
         if (is_array($data2) && !empty($data2['query']['pages']) && is_array($data2['query']['pages'])) {
             $p2 = reset($data2['query']['pages']);
-            if (is_array($p2) && isset($p2['extract'])) {
-                $extract = trim((string)$p2['extract']);
+            if (is_array($p2)) {
+                $extract = isset($p2['extract']) ? trim((string)$p2['extract']) : '';
+                $link    = isset($p2['fullurl']) ? trim((string)$p2['fullurl']) : '';
             }
         }
 
-        return ['title' => $target_title, 'extract' => $extract];
+        return ['title' => $target_title, 'extract' => $extract, 'url' => $link];
     }
 
     /** Shortens a Wikipedia extract to a couple of sentences (~600 chars). */

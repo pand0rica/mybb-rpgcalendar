@@ -27,11 +27,14 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 - Month-text pre-fill in the ACP: generate a suggested month text from a location's weather and
   holidays, then edit and save it.
 - Generated holidays are translated into the board's default language and enriched with a short
-  Wikipedia description plus a "statutory day off / working day" note (from Nager.Date's holiday
-  type); the holiday description column is now TEXT. Weather conditions show localized labels in
-  the ACP too (localized dropdown in the form, localized label in the list). A "Delete all
-  generated" button on the Weather and Holidays tabs removes all auto-generated entries at once
-  (honouring the location filter), leaving manual entries intact.
+  Wikipedia description, a link to the full Wikipedia article and a "statutory day off / working
+  day" note (from Nager.Date's holiday type); the holiday description column is now TEXT and a new
+  `url` column holds the article link. A setting (*Enrich generated holidays with Wikipedia*) turns
+  the Wikipedia enrichment on or off; when off, only the plain holiday name and the day-off note are
+  stored. Wikipedia is queried with a descriptive User-Agent (required by the Wikimedia APIs).
+  Weather conditions show localized labels in the ACP too (localized dropdown in the form, localized
+  label in the list). A "Delete all generated" button on the Weather and Holidays tabs removes all
+  auto-generated entries at once (honouring the location filter), leaving manual entries intact.
 - New tables `rpgcalendar_locations`, `rpgcalendar_weather`, `rpgcalendar_holidays`; new
   settings for the weather image directory, holiday symbol and missing-data hint. Tables are
   created idempotently on activation (upgrade path).

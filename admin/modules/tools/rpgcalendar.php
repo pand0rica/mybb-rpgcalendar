@@ -950,6 +950,8 @@ if ($action === 'do_add_holiday' || $action === 'do_edit_holiday') {
         'locid'       => $mybb->get_input('locid', MyBB::INPUT_INT),
         'title'       => trim($mybb->get_input('title')),
         'description' => trim($mybb->get_input('description')),
+        // Keep the auto-fetched Wikipedia link when editing (no form field for it).
+        'url'         => $existing ? (string)$existing['url'] : '',
         'source'      => 'manual',
     ]);
     if ($data['locid'] <= 0 || !$rpgcalendar_db->getLocation($data['locid'])) {

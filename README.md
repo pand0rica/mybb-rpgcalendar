@@ -114,8 +114,10 @@ Every play location exposes two calendars – **weather** and **holidays** – t
    converts it to a manual entry so the next *Generate* keeps it).
 3. **Holidays** – manual holidays (location, title, date, optional *every year*). Holidays
    also appear in the important-events table below the grid. Generated holidays are translated
-   to the board's default language and get a short Wikipedia description plus a note whether it
-   is a statutory day off (all editable afterwards).
+   to the board's default language and get a short Wikipedia description, a link to the full
+   Wikipedia article and a note whether it is a statutory day off (all editable afterwards).
+   The Wikipedia enrichment can be turned off with the *Enrich generated holidays with
+   Wikipedia* setting – then only the plain holiday name and the day-off note are stored.
 
 **Weather icons:** each weather condition is a WMO weather code, so there is one image per
 code, named after the code (`0.svg`, `61.svg`, `95.svg`, … – e.g. `61.svg` for light rain).
@@ -129,7 +131,8 @@ is a derived `windy` condition: when generating, a day whose maximum wind speed 
 
 In a day cell, weather is always shown on top, holidays below it, then the other events.
 Weather and holiday chips are clickable and open a small detail page with a short description
-(location, temperature for weather, description for holidays).
+(location, temperature for weather; the Wikipedia description and a link to the full article
+for holidays).
 
 #### Data sources & privacy
 
@@ -253,6 +256,7 @@ Path: **ACP → Configuration → Settings → RPG Calendar**
 | Weather image directory | Board-relative folder with weather images named after the WMO weather code (`0.svg` … `99.svg`, plus `windy.svg`). Ships with a default icon set |
 | Windy threshold (km/h) | When generating, a day with max wind speed ≥ this value is marked `windy` instead of its weather code (0 = off) |
 | Holiday symbol | One symbol for all holidays: an emoji/short text or an image URL |
+| Enrich generated holidays with Wikipedia | Translate generated holiday names and add a short description + article link from Wikipedia. Off = plain name and day-off note only |
 | Show missing-data hint | Show the "please add data" hint for fictional locations without data |
 | Team groups | User groups whose members may create forum-wide events from the day view. Everyone else can only create personal events and invite individual members. Empty = only admins publish forum-wide events |
 | Current in-play months | Comma-separated `year-month` tokens (e.g. `1487-3, 1487-4`) whose month texts are collected into the global template variable `{$rpgcalendar_current_monthtexts}` (usable in templates and forum/category descriptions). Empty disables the variable (no query overhead) |

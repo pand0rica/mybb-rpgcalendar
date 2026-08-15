@@ -1340,6 +1340,12 @@ if ($rpgcalendar_action === 'weatherinfo' || $rpgcalendar_action === 'holidayinf
         if (trim((string)$row['description']) !== '') {
             $parts[] = nl2br(htmlspecialchars_uni((string)$row['description']));
         }
+        // Link to the full Wikipedia article (replaces the trimmed "…" dead-end).
+        $wiki_url = trim((string)($row['url'] ?? ''));
+        if ($wiki_url !== '' && (strpos($wiki_url, 'https://') === 0 || strpos($wiki_url, 'http://') === 0)) {
+            $parts[] = '<a href="' . htmlspecialchars_uni($wiki_url) . '" target="_blank" rel="noopener noreferrer nofollow">'
+                . $lang->rpgcalendar_wiki_more . '</a>';
+        }
         if ($locname !== '') {
             $parts[] = $lang->sprintf($lang->rpgcalendar_holiday_in, $locname);
         }

@@ -172,6 +172,7 @@ class Rpgcalendar_Installer
             `source`      VARCHAR(10) NOT NULL DEFAULT 'manual',
             `title`       VARCHAR(200) NOT NULL DEFAULT '',
             `description` TEXT NOT NULL,
+            `url`         VARCHAR(255) NOT NULL DEFAULT '',
             `start_year`  SMALLINT NOT NULL DEFAULT 0,
             `start_month` TINYINT UNSIGNED NOT NULL DEFAULT 1,
             `start_day`   TINYINT UNSIGNED NOT NULL DEFAULT 1,
@@ -225,6 +226,13 @@ class Rpgcalendar_Installer
             if ($needs) {
                 $db->modify_column('rpgcalendar_holidays', 'description', 'TEXT NOT NULL');
             }
+        }
+
+        // v1.2: link to the full Wikipedia article for a generated holiday.
+        if ($db->table_exists('rpgcalendar_holidays')
+            && !$db->field_exists('url', 'rpgcalendar_holidays')) {
+            $db->add_column('rpgcalendar_holidays', 'url',
+                "VARCHAR(255) NOT NULL DEFAULT '' AFTER `description`");
         }
 
         self::migrateEventsToCalendars();
@@ -456,6 +464,15 @@ class Rpgcalendar_Installer
                 'Holiday symbol',
                 'One symbol shown in front of every holiday. Either an emoji/short text or an image URL (a value containing a slash or ending in .png/.gif/.jpg/.svg is rendered as an image).',
                 'text', '',
+            ],
+            'holiday_wiki' => [
+                'Enrich generated holidays with Wikipedia',
+                'When generating holidays for a real location, translate the holiday name into '
+                    . 'the board language and add a short explanation plus a link to the full '
+                    . 'article, fetched from Wikipedia. Turn this off to keep only the plain '
+                    . 'holiday name and the "day off / working day" note. Existing entries are '
+                    . 'not changed; re-generate to apply.',
+                'onoff', '1',
             ],
             'weather_hint' => [
                 'Show missing-data hint',
