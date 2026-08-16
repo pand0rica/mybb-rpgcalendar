@@ -122,7 +122,7 @@ function rpgcalendar_weather_symbol(string $slug, string $label, int $seed = 0):
 /** Markup for the single global holiday symbol (image URL or emoji/text). */
 function rpgcalendar_holiday_symbol(): string
 {
-    global $mybb;
+    global $mybb, $lang;
     static $cache = null;
 
     if ($cache !== null) {
@@ -134,7 +134,12 @@ function rpgcalendar_holiday_symbol(): string
     if ($sym === '') {
         $cache = '';
     } elseif (strpos($sym, '/') !== false || preg_match('/\.(png|gif|jpe?g|svg|webp)$/i', $sym)) {
-        $cache = '<img src="' . htmlspecialchars_uni($sym) . '" alt="" class="rpgcalendar_wicon" /> ';
+        // Give the image a non-empty alt/title, mirroring the weather <img> markup
+        // exactly – an empty alt="" makes some image filters treat it as a bare/unnamed
+        // image and strip it.
+        $label = (isset($lang->rpgcalendar_cal_holiday) && (string)$lang->rpgcalendar_cal_holiday !== '')
+            ? htmlspecialchars_uni((string)$lang->rpgcalendar_cal_holiday) : 'Holiday';
+        $cache = '<img src="' . htmlspecialchars_uni($sym) . '" alt="' . $label . '" title="' . $label . '" class="rpgcalendar_wicon" /> ';
     } else {
         $cache = htmlspecialchars_uni($sym) . ' ';
     }
