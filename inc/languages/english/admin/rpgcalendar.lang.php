@@ -123,6 +123,8 @@ $l['rpgcalendar_tab_weather']          = "Weather";
 $l['rpgcalendar_tab_desc_weather']     = "Weather entries per location. Generated entries can be edited; editing one keeps it on the next generation run.";
 $l['rpgcalendar_tab_holidays']         = "Holidays";
 $l['rpgcalendar_tab_desc_holidays']    = "Holiday entries per location. Generated entries can be edited freely.";
+$l['rpgcalendar_tab_moon']             = "Moon";
+$l['rpgcalendar_tab_desc_moon']        = "Moon phases per location. Generated entries can be edited; editing one keeps it on the next generation run.";
 $l['rpgcalendar_tab_add_location']     = "Add location";
 $l['rpgcalendar_tab_add_location_desc']  = "Create a new play location (real or fictional).";
 $l['rpgcalendar_tab_edit_location']    = "Edit location";
@@ -135,6 +137,10 @@ $l['rpgcalendar_tab_add_holiday']      = "Add holiday";
 $l['rpgcalendar_tab_add_holiday_desc']   = "Add a manual holiday for a location.";
 $l['rpgcalendar_tab_edit_holiday']     = "Edit holiday";
 $l['rpgcalendar_tab_edit_holiday_desc']  = "Change this holiday.";
+$l['rpgcalendar_tab_add_moon']         = "Add moon phase";
+$l['rpgcalendar_tab_add_moon_desc']      = "Add a manual moon phase for a location.";
+$l['rpgcalendar_tab_edit_moon']        = "Edit moon phase";
+$l['rpgcalendar_tab_edit_moon_desc']     = "Change this moon phase.";
 
 // Location form
 $l['rpgcalendar_field_locname']      = "Name";
@@ -149,15 +155,29 @@ $l['rpgcalendar_field_city']         = "City";
 $l['rpgcalendar_field_city_desc']    = "City name for the weather source. Coordinates are looked up automatically if left empty.";
 $l['rpgcalendar_field_coords']       = "Coordinates";
 $l['rpgcalendar_field_coords_desc']  = "Latitude and longitude (optional). Filled in automatically from the city on the first generation.";
+$l['rpgcalendar_field_moon_enabled']      = "Moon calendar";
+$l['rpgcalendar_field_moon_enabled_desc'] = "Generate moon phases for this location. Enables the moon sub-calendar and the &quot;Generate&quot; button for it.";
+$l['rpgcalendar_field_moon_cycle']        = "Cycle length (days)";
+$l['rpgcalendar_field_moon_cycle_desc']   = "Length of one full moon cycle in days. Real locations ignore this and use Earth's real cycle (29.53 days); for fictional worlds enter your own (e.g. 28 or 40).";
+$l['rpgcalendar_field_moon_ref']          = "Reference phase";
+$l['rpgcalendar_field_moon_ref_desc']     = "A day on which the chosen phase occurs, anchoring the whole cycle. Fictional locations only – real locations are anchored to the real moon automatically.";
 $l['rpgcalendar_field_disporder']    = "Display order";
 
-// Weather / holiday form
+// Weather / holiday / moon form
 $l['rpgcalendar_field_location']      = "Location";
 $l['rpgcalendar_field_location_desc'] = "Which location this entry belongs to.";
 $l['rpgcalendar_field_condition']     = "Condition";
 $l['rpgcalendar_field_condition_desc'] = "Condition slug – the plugin looks for an image of this name in the weather image directory. Standard slugs: clear, cloudy, fog, rain, snow, thunder.";
+$l['rpgcalendar_field_phase']         = "Phase";
+$l['rpgcalendar_field_phase_desc']    = "The moon phase for this day. The plugin looks for an image of this name in the moon image directory.";
 $l['rpgcalendar_field_note']          = "Note";
 $l['rpgcalendar_field_note_desc']     = "Optional (e.g. a temperature). Shown next to the weather icon.";
+
+// Moon phase labels (also the reference-phase selector)
+$l['rpgcalendar_mphase_new']    = "New moon";
+$l['rpgcalendar_mphase_waxing'] = "Waxing half moon";
+$l['rpgcalendar_mphase_full']   = "Full moon";
+$l['rpgcalendar_mphase_waning'] = "Waning half moon";
 $l['rpgcalendar_field_yearly']        = "Every year";
 $l['rpgcalendar_field_yearly_desc']   = "If yes, this entry repeats on the same date in every year from the start year onwards.";
 
@@ -166,22 +186,24 @@ $l['rpgcalendar_th_locname'] = "Name";
 $l['rpgcalendar_th_type']    = "Type";
 $l['rpgcalendar_th_place']   = "City / country";
 $l['rpgcalendar_no_locations'] = "No locations yet.";
-$l['rpgcalendar_confirm_delete_location'] = "Really delete? All weather and holiday data of this location will be removed.";
+$l['rpgcalendar_confirm_delete_location'] = "Really delete? All weather, holiday and moon data of this location will be removed.";
 
-// Weather / holiday list
+// Weather / holiday / moon list
 $l['rpgcalendar_th_location']  = "Location";
 $l['rpgcalendar_th_condition'] = "Condition";
+$l['rpgcalendar_th_phase']     = "Phase";
 $l['rpgcalendar_th_source']    = "Source";
 $l['rpgcalendar_no_weather']   = "No weather entries yet.";
 $l['rpgcalendar_no_holidays']  = "No holidays yet.";
+$l['rpgcalendar_no_moon']      = "No moon phases yet.";
 $l['rpgcalendar_filter_all_locations'] = "All locations";
 $l['rpgcalendar_yearly_short'] = "yearly";
 
 // Generate
-$l['rpgcalendar_generate_title'] = "Generate weather &amp; holidays";
-$l['rpgcalendar_generate_desc']  = "For a real location: fetch real weather and holidays for the chosen year range and store them as editable entries (replacing previously generated ones).";
+$l['rpgcalendar_generate_title'] = "Generate weather, holidays &amp; moon";
+$l['rpgcalendar_generate_desc']  = "For a real location: fetch real weather and holidays for the chosen year range. For any moon-enabled location: compute the moon phases (works for any year). Stored as editable entries, replacing previously generated ones.";
 $l['rpgcalendar_generate_btn']   = "Generate";
-$l['rpgcalendar_generate_done']  = "Generation finished: {1} weather entries and {2} holidays.";
+$l['rpgcalendar_generate_done']  = "Generation finished: {1} weather entries, {2} holidays and {3} moon phases.";
 $l['rpgcalendar_generate_failed'] = "Nothing could be generated. Details: {1}";
 
 // Month text pre-fill
@@ -205,9 +227,12 @@ $l['rpgcalendar_wcond_thunder'] = "Thunderstorm";
 $l['rpgcalendar_error_invalid_name']    = "Please enter a name.";
 $l['rpgcalendar_error_country']         = "Real locations need a two-letter ISO country code.";
 $l['rpgcalendar_error_city_or_coords']  = "Real locations need a city or coordinates.";
-$l['rpgcalendar_error_not_real']        = "This location is not a real location, so it cannot be generated.";
+$l['rpgcalendar_error_not_real']        = "This location has nothing to generate: weather and holidays need a real location, and the moon calendar is turned off.";
 $l['rpgcalendar_error_location']        = "Please choose a valid location.";
 $l['rpgcalendar_error_condition']       = "Please enter a weather condition.";
+$l['rpgcalendar_error_phase']           = "Please choose a moon phase.";
+$l['rpgcalendar_error_moon_cycle']      = "The moon cycle length must be between 1 and 3660 days.";
+$l['rpgcalendar_error_moon_ref']        = "The moon reference date is invalid or outside the allowed year range.";
 
 // Bulk delete of generated entries
 $l['rpgcalendar_delete_auto']         = "Delete all generated";

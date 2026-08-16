@@ -16,6 +16,10 @@ built for RPG forums. It merges four event sources into one grid:
   as editable entries, for **fictional** locations the team fills them in by hand. Each
   location's weather and holiday calendar can be recoloured or hidden per member on the
   *My calendars* page.
+- **Moon calendar per location** – generate the four principal moon phases (new, waxing,
+  full, waning) with no external API: **real** locations follow the real Earth moon, **fictional**
+  locations use a freely configurable cycle length and reference date (a fantasy moon). Works for
+  any year, including far past/future. Its own recolour/hide calendar per member.
 
 Plus a free text per month + year (weather, moon phases, …) above the grid and a table of
 all important events below it.
@@ -131,10 +135,40 @@ is a derived `windy` condition: when generating, a day whose maximum wind speed 
 with a default calendar-star icon (`inc/plugins/rpgcalendar/assets/holiday/calendar-star.svg`)
 drawn to match the weather icon set.
 
-In a day cell, weather is always shown on top, holidays below it, then the other events.
-Weather and holiday chips are clickable and open a small detail page with a short description
-(location, temperature for weather; the Wikipedia description and a link to the full article
-for holidays).
+In a day cell, weather and moon are shown on top, holidays below them, then the other events.
+Weather, moon and holiday chips are clickable and open a small detail page with a short
+description (location, temperature for weather; the phase for the moon; the Wikipedia
+description and a link to the full article for holidays).
+
+### Moon calendar (Admin)
+
+Path: **ACP → Tools & Maintenance → RPG Calendar → Locations / Moon**
+
+The moon calendar is per location and needs **no external service** – phases are computed
+locally, so they exist for **any year** (unlike weather, which is bound to the real-data range).
+
+1. On the **location** form, turn **Moon calendar** on. Then:
+   - **Real** locations follow the real Earth moon automatically (the cycle/reference fields are
+     ignored).
+   - **Fictional** locations use the **Cycle length** (days) and a **Reference phase** – pick a
+     date on which a *new* or *full* moon occurs; that anchors the whole cycle. This is how you
+     build a fantasy moon (e.g. a 28-day or 40-day cycle).
+2. On the location list, use **Generate** with a year range. Any moon-enabled location (real or
+   fictional) gets its four principal phases – **new moon, waxing half moon, full moon, waning
+   half moon** – stored as editable entries. *Generate* again to extend/refresh; it replaces
+   previously generated entries but keeps any you edited or added by hand.
+3. The **Moon** tab lists all phases and lets you add or edit them by hand (editing a generated
+   entry converts it to manual so the next *Generate* keeps it), filter by location, and bulk-
+   delete all generated entries.
+
+**Moon icons:** one image per phase, named after the phase (`new`, `waxing`, `full`, `waning`),
+in the *Moon image directory*. A default set ships with the plugin; if no image is found the
+localized phase text is shown. Dash-suffixed variants work like the weather icons. Each moon-
+enabled location exposes a `moon` calendar on the *My calendars* page, so members recolour or
+hide it like any other.
+
+> Accuracy note: real-location phases use a mean synodic cycle (~29.53 days), so a phase may
+> land up to about a day off the exact astronomical instant – fine for calendar use.
 
 #### Data sources & privacy
 

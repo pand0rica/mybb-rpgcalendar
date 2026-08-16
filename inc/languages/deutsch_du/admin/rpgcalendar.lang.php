@@ -123,6 +123,8 @@ $l['rpgcalendar_tab_weather']          = "Wetter";
 $l['rpgcalendar_tab_desc_weather']     = "Wetter-Einträge pro Ort. Generierte Einträge sind editierbar; ein bearbeiteter Eintrag bleibt bei der nächsten Generierung erhalten.";
 $l['rpgcalendar_tab_holidays']         = "Feiertage";
 $l['rpgcalendar_tab_desc_holidays']    = "Feiertags-Einträge pro Ort. Generierte Einträge sind frei editierbar.";
+$l['rpgcalendar_tab_moon']             = "Mond";
+$l['rpgcalendar_tab_desc_moon']        = "Mondphasen pro Ort. Generierte Einträge sind editierbar; ein bearbeiteter Eintrag bleibt bei der nächsten Generierung erhalten.";
 $l['rpgcalendar_tab_add_location']     = "Ort anlegen";
 $l['rpgcalendar_tab_add_location_desc']  = "Einen neuen Spielort anlegen (real oder fiktiv).";
 $l['rpgcalendar_tab_edit_location']    = "Ort bearbeiten";
@@ -135,6 +137,10 @@ $l['rpgcalendar_tab_add_holiday']      = "Feiertag anlegen";
 $l['rpgcalendar_tab_add_holiday_desc']   = "Einen manuellen Feiertag für einen Ort anlegen.";
 $l['rpgcalendar_tab_edit_holiday']     = "Feiertag bearbeiten";
 $l['rpgcalendar_tab_edit_holiday_desc']  = "Diesen Feiertag ändern.";
+$l['rpgcalendar_tab_add_moon']         = "Mondphase anlegen";
+$l['rpgcalendar_tab_add_moon_desc']      = "Eine manuelle Mondphase für einen Ort anlegen.";
+$l['rpgcalendar_tab_edit_moon']        = "Mondphase bearbeiten";
+$l['rpgcalendar_tab_edit_moon_desc']     = "Diese Mondphase ändern.";
 
 // Ort-Formular
 $l['rpgcalendar_field_locname']      = "Name";
@@ -149,15 +155,29 @@ $l['rpgcalendar_field_city']         = "Stadt";
 $l['rpgcalendar_field_city_desc']    = "Stadtname für die Wetterquelle. Koordinaten werden automatisch ermittelt, wenn leer.";
 $l['rpgcalendar_field_coords']       = "Koordinaten";
 $l['rpgcalendar_field_coords_desc']  = "Breiten- und Längengrad (optional). Werden bei der ersten Generierung automatisch aus der Stadt ermittelt.";
+$l['rpgcalendar_field_moon_enabled']      = "Mondkalender";
+$l['rpgcalendar_field_moon_enabled_desc'] = "Für diesen Ort Mondphasen generieren. Aktiviert den Mond-Unterkalender und den &quot;Generieren&quot;-Button dafür.";
+$l['rpgcalendar_field_moon_cycle']        = "Zykluslänge (Tage)";
+$l['rpgcalendar_field_moon_cycle_desc']   = "Länge eines vollständigen Mondzyklus in Tagen. Reale Orte ignorieren das und nutzen den echten Erdzyklus (29,53 Tage); für fiktive Welten einen eigenen Wert eintragen (z.B. 28 oder 40).";
+$l['rpgcalendar_field_moon_ref']          = "Bezugsphase";
+$l['rpgcalendar_field_moon_ref_desc']     = "Ein Tag, an dem die gewählte Phase eintritt – verankert den ganzen Zyklus. Nur fiktive Orte – reale Orte werden automatisch am echten Mond verankert.";
 $l['rpgcalendar_field_disporder']    = "Reihenfolge";
 
-// Wetter-/Feiertags-Formular
+// Wetter-/Feiertags-/Mond-Formular
 $l['rpgcalendar_field_location']      = "Ort";
 $l['rpgcalendar_field_location_desc'] = "Zu welchem Ort dieser Eintrag gehört.";
 $l['rpgcalendar_field_condition']     = "Wetterlage";
 $l['rpgcalendar_field_condition_desc'] = "Wetter-Slug – das Plugin sucht ein gleichnamiges Bild im Wetter-Bildordner. Standard-Slugs: clear, cloudy, fog, rain, snow, thunder.";
+$l['rpgcalendar_field_phase']         = "Phase";
+$l['rpgcalendar_field_phase_desc']    = "Die Mondphase dieses Tages. Das Plugin sucht ein gleichnamiges Bild im Mond-Bildordner.";
 $l['rpgcalendar_field_note']          = "Notiz";
 $l['rpgcalendar_field_note_desc']     = "Optional (z.B. Temperatur). Wird neben dem Wettersymbol angezeigt.";
+
+// Mondphasen-Bezeichnungen (auch die Auswahl der Bezugsphase)
+$l['rpgcalendar_mphase_new']    = "Neumond";
+$l['rpgcalendar_mphase_waxing'] = "Zunehmender Halbmond";
+$l['rpgcalendar_mphase_full']   = "Vollmond";
+$l['rpgcalendar_mphase_waning'] = "Abnehmender Halbmond";
 $l['rpgcalendar_field_yearly']        = "Jedes Jahr";
 $l['rpgcalendar_field_yearly_desc']   = "Wenn ja, wiederholt sich dieser Eintrag ab dem Startjahr jedes Jahr am selben Datum.";
 
@@ -166,22 +186,24 @@ $l['rpgcalendar_th_locname'] = "Name";
 $l['rpgcalendar_th_type']    = "Typ";
 $l['rpgcalendar_th_place']   = "Stadt / Land";
 $l['rpgcalendar_no_locations'] = "Noch keine Orte vorhanden.";
-$l['rpgcalendar_confirm_delete_location'] = "Wirklich löschen? Alle Wetter- und Feiertagsdaten dieses Orts werden entfernt.";
+$l['rpgcalendar_confirm_delete_location'] = "Wirklich löschen? Alle Wetter-, Feiertags- und Monddaten dieses Orts werden entfernt.";
 
-// Wetter-/Feiertags-Liste
+// Wetter-/Feiertags-/Mond-Liste
 $l['rpgcalendar_th_location']  = "Ort";
 $l['rpgcalendar_th_condition'] = "Wetterlage";
+$l['rpgcalendar_th_phase']     = "Phase";
 $l['rpgcalendar_th_source']    = "Quelle";
 $l['rpgcalendar_no_weather']   = "Noch keine Wetter-Einträge vorhanden.";
 $l['rpgcalendar_no_holidays']  = "Noch keine Feiertage vorhanden.";
+$l['rpgcalendar_no_moon']      = "Noch keine Mondphasen vorhanden.";
 $l['rpgcalendar_filter_all_locations'] = "Alle Orte";
 $l['rpgcalendar_yearly_short'] = "jährlich";
 
 // Generieren
-$l['rpgcalendar_generate_title'] = "Wetter &amp; Feiertage generieren";
-$l['rpgcalendar_generate_desc']  = "Für einen realen Ort: echtes Wetter und Feiertage für den gewählten Jahresbereich abrufen und als editierbare Einträge speichern (ersetzt zuvor generierte).";
+$l['rpgcalendar_generate_title'] = "Wetter, Feiertage &amp; Mond generieren";
+$l['rpgcalendar_generate_desc']  = "Für einen realen Ort: echtes Wetter und Feiertage für den gewählten Jahresbereich abrufen. Für jeden Ort mit aktiviertem Mondkalender: die Mondphasen berechnen (für beliebige Jahre). Wird als editierbare Einträge gespeichert (ersetzt zuvor generierte).";
 $l['rpgcalendar_generate_btn']   = "Generieren";
-$l['rpgcalendar_generate_done']  = "Generierung abgeschlossen: {1} Wetter-Einträge und {2} Feiertage.";
+$l['rpgcalendar_generate_done']  = "Generierung abgeschlossen: {1} Wetter-Einträge, {2} Feiertage und {3} Mondphasen.";
 $l['rpgcalendar_generate_failed'] = "Es konnte nichts generiert werden. Details: {1}";
 
 // Monatstext-Vorbelegung
@@ -205,9 +227,12 @@ $l['rpgcalendar_wcond_thunder'] = "Gewitter";
 $l['rpgcalendar_error_invalid_name']    = "Bitte gib einen Namen ein.";
 $l['rpgcalendar_error_country']         = "Reale Orte brauchen einen zweistelligen ISO-Ländercode.";
 $l['rpgcalendar_error_city_or_coords']  = "Reale Orte brauchen eine Stadt oder Koordinaten.";
-$l['rpgcalendar_error_not_real']        = "Dieser Ort ist kein realer Ort und kann nicht generiert werden.";
+$l['rpgcalendar_error_not_real']        = "Dieser Ort hat nichts zu generieren: Wetter und Feiertage brauchen einen realen Ort, und der Mondkalender ist deaktiviert.";
 $l['rpgcalendar_error_location']        = "Bitte einen gültigen Ort wählen.";
 $l['rpgcalendar_error_condition']       = "Bitte eine Wetterlage eingeben.";
+$l['rpgcalendar_error_phase']           = "Bitte eine Mondphase wählen.";
+$l['rpgcalendar_error_moon_cycle']      = "Die Mondzyklus-Länge muss zwischen 1 und 3660 Tagen liegen.";
+$l['rpgcalendar_error_moon_ref']        = "Das Mond-Bezugsdatum ist ungültig oder außerhalb des erlaubten Jahresbereichs.";
 
 // Massen-Löschen generierter Einträge
 $l['rpgcalendar_delete_auto']         = "Alle generierten löschen";

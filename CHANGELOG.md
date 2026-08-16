@@ -3,6 +3,31 @@
 All notable changes to this project will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [1.3.0] - 2026-08-16
+
+### New
+- **Moon calendar per location.** Each location can generate the four principal moon phases
+  (new moon, waxing half moon, full moon, waning half moon) as editable "auto" entries, driven
+  by the same ACP *Generate* button over a year range. Unlike weather this needs **no external
+  API** – phases are computed locally from a mean synodic cycle, so they work for **any year**,
+  including far past/future and negative (fictional) years. **Real** locations are anchored to
+  the real Earth moon; **fictional** locations use a freely configurable cycle length and a
+  reference phase date (e.g. a 28- or 40-day fantasy moon).
+- Each moon-enabled location exposes a virtual calendar `moon-{locid}` that plugs into the
+  existing per-user calendar system: members recolour or hide it on the "My calendars" page
+  like any other calendar. Moon chips sit at the top of a day cell (with weather); they are not
+  "important" (no event-table entry). Moon chips are clickable and open a small detail page.
+- Moon phase chips show an image named after the phase (`new`, `waxing`, `full`, `waning`) from
+  a configurable directory (*Moon image directory*, default set) with a localized text fallback;
+  dash-suffixed variants are supported like the weather icons. A default moon icon set ships with
+  the plugin.
+- New ACP tab **Moon** (list + manual add/edit, per-location filter, bulk *Delete all generated*),
+  new moon-configuration fields on the location form, and the *Generate* action now also produces
+  moon phases for any moon-enabled location (real or fictional).
+- New table `rpgcalendar_moonphases`; new columns on `rpgcalendar_locations`
+  (`moon_enabled`, `moon_cycle`, `moon_ref_year/month/day`, `moon_ref_phase`); new setting for the
+  moon image directory. Schema is added idempotently on (re)activation.
+
 ## [1.2.0] - 2026-08-14
 
 ### New

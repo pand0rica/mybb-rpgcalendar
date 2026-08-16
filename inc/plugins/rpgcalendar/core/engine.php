@@ -22,9 +22,10 @@ class Rpgcalendar_Engine
     /** Default colour of the built-in virtual "birthdays" calendar. */
     const BIRTHDAY_COLOR = '#f59e0b';
 
-    /** Default colours of the per-location weather/holiday virtual calendars. */
+    /** Default colours of the per-location weather/holiday/moon virtual calendars. */
     const WEATHER_COLOR = '#0ea5e9';
     const HOLIDAY_COLOR = '#ec4899';
+    const MOON_COLOR    = '#94a3b8';
 
     /** @var Rpgcalendar_Database */
     private $database;
@@ -276,11 +277,12 @@ class Rpgcalendar_Engine
         // Weather sits above holidays in a day cell; holidays are important.
         $locations = $this->database->listLocations(true);
         if ($locations) {
-            $weather_locids = $holiday_locids = [];
-            $wstate = $hstate = $locname = [];
+            $weather_locids = $holiday_locids = $moon_locids = [];
+            $wstate = $hstate = $mstate = $locname = $moon_on = [];
             foreach ($locations as $loc) {
                 $lid = (int)$loc['locid'];
                 $locname[$lid] = (string)$loc['name'];
+                $moon_on[$lid] = ((int)($loc['moon_enabled'] ?? 0) === 1);
                 $wstate[$lid] = $this->resolveCalendar('weather-' . $lid, self::WEATHER_COLOR);
                 $hstate[$lid] = $this->resolveCalendar('holiday-' . $lid, self::HOLIDAY_COLOR);
                 if ($wstate[$lid]['visible']) {
@@ -289,13 +291,26 @@ class Rpgcalendar_Engine
                 if ($hstate[$lid]['visible']) {
                     $holiday_locids[] = $lid;
                 }
+                // The moon sub-calendar only exists for moon-enabled locations.
+                if ($moon_on[$lid]) {
+                    $mstate[$lid] = $this->resolveCalendar('moon-' . $lid, self::MOON_COLOR);
+                    if ($mstate[$lid]['visible']) {
+                        $moon_locids[] = $lid;
+                    }
+                }
             }
 
-            $weather_present = $holiday_present = [];
+            $weather_present = $holiday_present = $moon_present = [];
             foreach ($this->database->getWeatherForMonthView($month_start_key, $month_end_key, $weather_locids) as $row) {
                 $lid = (int)$row['locid'];
                 if ($this->expandWeatherRow($row, $locname[$lid] ?? '', $wstate[$lid]['color'], $month_start_n, $month_end_n, $days, $important)) {
                     $weather_present[$lid] = true;
+                }
+            }
+            foreach ($this->database->getMoonForMonthView($month_start_key, $month_end_key, $moon_locids) as $row) {
+                $lid = (int)$row['locid'];
+                if ($this->expandMoonRow($row, $locname[$lid] ?? '', $mstate[$lid]['color'], $month_start_n, $month_end_n, $days, $important)) {
+                    $moon_present[$lid] = true;
                 }
             }
             foreach ($this->database->getHolidayForMonthView($month_start_key, $month_end_key, $holiday_locids) as $row) {
@@ -314,11 +329,13 @@ class Rpgcalendar_Engine
                 $lid = (int)$loc['locid'];
                 $w_missing = $wstate[$lid]['visible'] && !isset($weather_present[$lid]);
                 $h_missing = $hstate[$lid]['visible'] && !isset($holiday_present[$lid]);
-                if ($w_missing || $h_missing) {
+                $m_missing = $moon_on[$lid] && $mstate[$lid]['visible'] && !isset($moon_present[$lid]);
+                if ($w_missing || $h_missing || $m_missing) {
                     $hints[] = [
                         'name'    => (string)$loc['name'],
                         'weather' => $w_missing,
                         'holiday' => $h_missing,
+                        'moon'    => $m_missing,
                     ];
                 }
             }
@@ -424,6 +441,60 @@ class Rpgcalendar_Engine
                 'important'    => false,
                 'badge'        => 'weather',
                 'calendar_key' => 'weather-' . $locid,
+                'color'        => $color,
+                'sort'         => 0,
+                'locname'      => $locname,
+            ];
+            $this->placeEvent($event, $month_start_n, $month_end_n, $days, $important);
+            $placed = true;
+        }
+
+        return $placed;
+    }
+
+    /**
+     * Places every occurrence of a moon-phase row. Like weather it sits at the
+     * top of a day cell (sort 0) and is never "important". The phase slug travels
+     * in 'condition' so the frontend can reuse the weather symbol/label helpers.
+     * Returns true if anything landed.
+     */
+    private function expandMoonRow(array $row, string $locname, string $color, int $month_start_n, int $month_end_n, array &$days, array &$important): bool
+    {
+        $start_y = (int)$row['start_year'];
+        $start_m = (int)$row['start_month'];
+        $start_d = (int)$row['start_day'];
+        $start_n = self::dayNumber($start_y, $start_m, $start_d);
+        $end_n   = self::dayNumber((int)$row['end_year'], (int)$row['end_month'], (int)$row['end_day']);
+        $span    = max(0, $end_n - $start_n);
+        $yearly  = ((int)$row['yearly'] === 1);
+        $view    = self::fromDayNumber($month_start_n);
+        $locid   = (int)$row['locid'];
+
+        $placed = false;
+        foreach (self::datedOccurrenceStarts($start_y, $start_m, $start_d, $span, $yearly, $view['y']) as $occ_start_n) {
+            if ($occ_start_n < $start_n) {
+                continue;
+            }
+            $occ_end_n = $occ_start_n + $span;
+            if ($occ_end_n < $month_start_n || $occ_start_n > $month_end_n) {
+                continue;
+            }
+            $occ_start = self::fromDayNumber($occ_start_n);
+            $event = [
+                'id'           => 'moon-' . (int)$row['mid'] . '-' . $occ_start_n,
+                'source'       => 'moon',
+                'title'        => '',
+                'condition'    => (string)$row['phase'],
+                'mid'          => (int)$row['mid'],
+                'note'         => (string)$row['note'],
+                'description'  => '',
+                'url'          => 'rpgcalendar.php?action=mooninfo&mid=' . (int)$row['mid']
+                    . '&year=' . $occ_start['y'] . '&month=' . $occ_start['m'] . '&day=' . $occ_start['d'],
+                'start'        => $occ_start,
+                'end'          => self::fromDayNumber($occ_end_n),
+                'important'    => false,
+                'badge'        => 'moon',
+                'calendar_key' => 'moon-' . $locid,
                 'color'        => $color,
                 'sort'         => 0,
                 'locname'      => $locname,
@@ -554,6 +625,13 @@ class Rpgcalendar_Engine
                 'name'          => $lang->rpgcalendar_cal_holiday . ' – ' . $name,
                 'default_color' => self::HOLIDAY_COLOR,
             ];
+            if ((int)($loc['moon_enabled'] ?? 0) === 1) {
+                $cals[] = [
+                    'key'           => 'moon-' . $lid,
+                    'name'          => $lang->rpgcalendar_cal_moon . ' – ' . $name,
+                    'default_color' => self::MOON_COLOR,
+                ];
+            }
         }
 
         if (is_object($plugins)) {

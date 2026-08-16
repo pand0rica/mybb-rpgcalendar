@@ -69,6 +69,11 @@ function rpgcalendar_acp_tabs(string $active): void
             'link'        => 'index.php?module=tools-rpgcalendar&amp;action=holidays',
             'description' => $lang->rpgcalendar_tab_desc_holidays,
         ],
+        'moon' => [
+            'title'       => $lang->rpgcalendar_tab_moon,
+            'link'        => 'index.php?module=tools-rpgcalendar&amp;action=moon',
+            'description' => $lang->rpgcalendar_tab_desc_moon,
+        ],
     ];
 
     $edit_tabs = [
@@ -79,6 +84,8 @@ function rpgcalendar_acp_tabs(string $active): void
         'edit_weather'  => 'rpgcalendar_tab_edit_weather',
         'add_holiday'   => 'rpgcalendar_tab_add_holiday',
         'edit_holiday'  => 'rpgcalendar_tab_edit_holiday',
+        'add_moon'      => 'rpgcalendar_tab_add_moon',
+        'edit_moon'     => 'rpgcalendar_tab_edit_moon',
     ];
     if (isset($edit_tabs[$active])) {
         $desc_key = ($active === 'edit_event')
@@ -401,21 +408,52 @@ function rpgcalendar_acp_wcond_select(Form $form, string $current): string
     return $form->generate_select_box('wcondition', $options, [$current], ['id' => 'wcondition']);
 }
 
+/** Localized label for a moon phase slug (falls back to the raw slug). */
+function rpgcalendar_acp_mphase_label(string $slug): string
+{
+    global $lang;
+
+    $key = 'rpgcalendar_mphase_' . preg_replace('/[^a-z0-9_]/', '', $slug);
+
+    return (isset($lang->$key) && $lang->$key !== '') ? $lang->$key : $slug;
+}
+
+/** Select box of the four principal moon phases (value = slug, label localized). */
+function rpgcalendar_acp_mphase_select(Form $form, string $current): string
+{
+    $options = [];
+    foreach (Rpgcalendar_Generator::moonPhaseSlugs() as $slug) {
+        $options[$slug] = rpgcalendar_acp_mphase_label($slug);
+    }
+    if ($current !== '' && !isset($options[$current])) {
+        $options[$current] = $current;
+    }
+
+    return $form->generate_select_box('phase', $options, [$current], ['id' => 'phase']);
+}
+
 /** Reads/validates the location form. @return array [data, errors] */
 function rpgcalendar_acp_read_location_input(): array
 {
     global $mybb, $lang;
 
     $errors = [];
+    list($min_year, $max_year) = rpgcalendar_acp_year_bounds();
     $data = [
-        'name'      => trim($mybb->get_input('name')),
-        'type'      => ($mybb->get_input('type', MyBB::INPUT_INT) === 1) ? 1 : 0,
-        'country'   => strtoupper(preg_replace('/[^A-Za-z]/', '', $mybb->get_input('country'))),
-        'city'      => trim($mybb->get_input('city')),
-        'lat'       => (float)$mybb->get_input('lat'),
-        'lon'       => (float)$mybb->get_input('lon'),
-        'disporder' => $mybb->get_input('disporder', MyBB::INPUT_INT),
-        'visible'   => $mybb->get_input('visible', MyBB::INPUT_INT),
+        'name'           => trim($mybb->get_input('name')),
+        'type'           => ($mybb->get_input('type', MyBB::INPUT_INT) === 1) ? 1 : 0,
+        'country'        => strtoupper(preg_replace('/[^A-Za-z]/', '', $mybb->get_input('country'))),
+        'city'           => trim($mybb->get_input('city')),
+        'lat'            => (float)$mybb->get_input('lat'),
+        'lon'            => (float)$mybb->get_input('lon'),
+        'moon_enabled'   => ($mybb->get_input('moon_enabled', MyBB::INPUT_INT) === 1) ? 1 : 0,
+        'moon_cycle'     => (float)$mybb->get_input('moon_cycle'),
+        'moon_ref_year'  => $mybb->get_input('moon_ref_year', MyBB::INPUT_INT),
+        'moon_ref_month' => $mybb->get_input('moon_ref_month', MyBB::INPUT_INT),
+        'moon_ref_day'   => $mybb->get_input('moon_ref_day', MyBB::INPUT_INT),
+        'moon_ref_phase' => ($mybb->get_input('moon_ref_phase', MyBB::INPUT_INT) === 2) ? 2 : 0,
+        'disporder'      => $mybb->get_input('disporder', MyBB::INPUT_INT),
+        'visible'        => $mybb->get_input('visible', MyBB::INPUT_INT),
     ];
     if (strlen($data['country']) > 2) {
         $data['country'] = substr($data['country'], 0, 2);
@@ -429,6 +467,20 @@ function rpgcalendar_acp_read_location_input(): array
         }
         if ($data['city'] === '' && $data['lat'] == 0.0 && $data['lon'] == 0.0) {
             $errors[] = $lang->rpgcalendar_error_city_or_coords;
+        }
+    }
+    // Moon settings only matter when moon generation is on, and only for
+    // fictional locations (real ones use the fixed Earth constants).
+    if ($data['moon_enabled'] === 1 && $data['type'] === 0) {
+        if ($data['moon_cycle'] < 1.0 || $data['moon_cycle'] > 3660.0) {
+            $errors[] = $lang->rpgcalendar_error_moon_cycle;
+        }
+        if ($data['moon_ref_month'] < 1 || $data['moon_ref_month'] > 12
+            || $data['moon_ref_day'] < 1
+            || $data['moon_ref_day'] > Rpgcalendar_Engine::daysInMonth($data['moon_ref_year'], $data['moon_ref_month'])
+            || $data['moon_ref_year'] < $min_year || $data['moon_ref_year'] > $max_year
+        ) {
+            $errors[] = $lang->rpgcalendar_error_moon_ref;
         }
     }
 
@@ -580,6 +632,31 @@ function rpgcalendar_acp_location_form(array $values, array $errors, string $for
         . ' ' . $form->generate_text_box('lon', $values['lon'], ['id' => 'lon', 'style' => 'width: 90px']),
         'lat'
     );
+    // Moon cycle configuration. Real locations use the fixed Earth constants, so
+    // the cycle/reference fields only take effect for fictional locations.
+    $fc->output_row(
+        $lang->rpgcalendar_field_moon_enabled,
+        $lang->rpgcalendar_field_moon_enabled_desc,
+        $form->generate_yes_no_radio('moon_enabled', (int)$values['moon_enabled']),
+        'moon_enabled'
+    );
+    $fc->output_row(
+        $lang->rpgcalendar_field_moon_cycle,
+        $lang->rpgcalendar_field_moon_cycle_desc,
+        $form->generate_text_box('moon_cycle', $values['moon_cycle'], ['id' => 'moon_cycle', 'style' => 'width: 90px']),
+        'moon_cycle'
+    );
+    $fc->output_row(
+        $lang->rpgcalendar_field_moon_ref,
+        $lang->rpgcalendar_field_moon_ref_desc,
+        rpgcalendar_acp_date_inputs($form, 'moon_ref', (int)$values['moon_ref_day'], (int)$values['moon_ref_month'], (int)$values['moon_ref_year'])
+        . ' &nbsp; '
+        . $form->generate_select_box('moon_ref_phase', [
+            0 => $lang->rpgcalendar_mphase_new,
+            2 => $lang->rpgcalendar_mphase_full,
+        ], [(int)$values['moon_ref_phase']], ['id' => 'moon_ref_phase']),
+        'moon_ref_day'
+    );
     $fc->output_row(
         $lang->rpgcalendar_field_disporder,
         '',
@@ -627,6 +704,49 @@ function rpgcalendar_acp_weather_form(Rpgcalendar_Database $db, array $values, a
         $lang->rpgcalendar_field_condition_desc,
         rpgcalendar_acp_wcond_select($form, (string)$values['wcondition']),
         'wcondition'
+    );
+    rpgcalendar_acp_dated_rows($fc, $form, $values);
+    $fc->output_row(
+        $lang->rpgcalendar_field_note,
+        $lang->rpgcalendar_field_note_desc,
+        $form->generate_text_box('note', $values['note'], ['id' => 'note']),
+        'note'
+    );
+    $fc->end();
+    $form->output_submit_wrapper([$form->generate_submit_button($lang->rpgcalendar_save)]);
+    $form->end();
+
+    $page->output_footer();
+}
+
+/** Renders the moon-phase add/edit form. */
+function rpgcalendar_acp_moon_form(Rpgcalendar_Database $db, array $values, array $errors, string $form_action, string $tab): void
+{
+    global $page, $lang;
+
+    $page->output_header($lang->rpgcalendar);
+    rpgcalendar_acp_tabs($tab);
+    if ($errors) {
+        $page->output_inline_error($errors);
+    }
+
+    $form = new Form('index.php?module=tools-rpgcalendar&amp;action=' . $form_action, 'post');
+    if (!empty($values['mid'])) {
+        echo $form->generate_hidden_field('mid', (int)$values['mid']);
+    }
+
+    $fc = new FormContainer(($tab === 'edit_moon') ? $lang->rpgcalendar_tab_edit_moon : $lang->rpgcalendar_tab_add_moon);
+    $fc->output_row(
+        $lang->rpgcalendar_field_location . ' <em>*</em>',
+        $lang->rpgcalendar_field_location_desc,
+        $form->generate_select_box('locid', rpgcalendar_acp_location_options($db), [(int)$values['locid']], ['id' => 'locid']),
+        'locid'
+    );
+    $fc->output_row(
+        $lang->rpgcalendar_field_phase . ' <em>*</em>',
+        $lang->rpgcalendar_field_phase_desc,
+        rpgcalendar_acp_mphase_select($form, (string)$values['phase']),
+        'phase'
     );
     rpgcalendar_acp_dated_rows($fc, $form, $values);
     $fc->output_row(
@@ -855,7 +975,12 @@ if ($action === 'do_generate' && $mybb->request_method === 'post') {
     $to_year   = $mybb->get_input('to_year', MyBB::INPUT_INT);
     $location  = $rpgcalendar_db->getLocation($locid);
 
-    if (!$location || (int)$location['type'] !== 1) {
+    $is_real   = ($location && (int)$location['type'] === 1);
+    $moon_on   = ($location && (int)$location['moon_enabled'] === 1);
+    // Real locations get weather + holidays; any moon-enabled location (real or
+    // fictional) also gets moon phases. A fictional location without moon has
+    // nothing to generate.
+    if (!$location || (!$is_real && !$moon_on)) {
         flash_message($lang->rpgcalendar_error_not_real, 'error');
         admin_redirect('index.php?module=tools-rpgcalendar&action=locations');
     }
@@ -864,15 +989,24 @@ if ($action === 'do_generate' && $mybb->request_method === 'post') {
         admin_redirect('index.php?module=tools-rpgcalendar&action=locations');
     }
 
-    $from_key  = Rpgcalendar_Engine::dateKey($from_year, 1, 1);
-    $to_key    = Rpgcalendar_Engine::dateKey($to_year, 12, 31);
     $generator = new Rpgcalendar_Generator($rpgcalendar_db);
-    $result    = $generator->generateForLocation($locid, $from_key, $to_key);
+    $weather = $holidays = $moon = 0;
+    if ($is_real) {
+        $from_key = Rpgcalendar_Engine::dateKey($from_year, 1, 1);
+        $to_key   = Rpgcalendar_Engine::dateKey($to_year, 12, 31);
+        $result   = $generator->generateForLocation($locid, $from_key, $to_key);
+        $weather  = $result['weather'];
+        $holidays = $result['holidays'];
+    }
+    if ($moon_on) {
+        $moon = $generator->generateMoonForLocation($locid, $from_year, $to_year);
+    }
+    $errors = $generator->getErrors();
 
-    if ($result['weather'] === 0 && $result['holidays'] === 0) {
-        flash_message($lang->sprintf($lang->rpgcalendar_generate_failed, implode(', ', $result['errors'])), 'error');
+    if ($weather === 0 && $holidays === 0 && $moon === 0) {
+        flash_message($lang->sprintf($lang->rpgcalendar_generate_failed, implode(', ', $errors)), 'error');
     } else {
-        flash_message($lang->sprintf($lang->rpgcalendar_generate_done, $result['weather'], $result['holidays']), 'success');
+        flash_message($lang->sprintf($lang->rpgcalendar_generate_done, $weather, $holidays, $moon), 'success');
     }
     admin_redirect('index.php?module=tools-rpgcalendar&action=locations');
 }
@@ -994,6 +1128,64 @@ if ($action === 'delete_auto_holiday' && $mybb->request_method === 'post') {
     $rpgcalendar_db->deleteAutoHoliday($loc);
     flash_message($lang->rpgcalendar_delete_auto_done, 'success');
     admin_redirect('index.php?module=tools-rpgcalendar&action=holidays&filter_loc=' . $loc);
+}
+
+// --- Moon phases ---
+
+if ($action === 'do_add_moon' || $action === 'do_edit_moon') {
+    $mid = ($action === 'do_edit_moon') ? $mybb->get_input('mid', MyBB::INPUT_INT) : 0;
+    $existing = ($mid > 0) ? $rpgcalendar_db->getMoon($mid) : null;
+    if ($action === 'do_edit_moon' && !$existing) {
+        flash_message($lang->rpgcalendar_error_not_found, 'error');
+        admin_redirect('index.php?module=tools-rpgcalendar&action=moon');
+    }
+
+    list($dates, $errors) = rpgcalendar_acp_read_dated_input();
+    $data = array_merge($dates, [
+        'locid'  => $mybb->get_input('locid', MyBB::INPUT_INT),
+        'phase'  => trim($mybb->get_input('phase')),
+        'note'   => trim($mybb->get_input('note')),
+        // Editing an auto row turns it into a manual one so a re-generate keeps it.
+        'source' => 'manual',
+    ]);
+    if ($data['locid'] <= 0 || !$rpgcalendar_db->getLocation($data['locid'])) {
+        $errors[] = $lang->rpgcalendar_error_location;
+    }
+    if ($data['phase'] === '') {
+        $errors[] = $lang->rpgcalendar_error_phase;
+    }
+
+    if ($errors) {
+        $values = array_merge(rpgcalendar_acp_dated_defaults(), $data, [
+            'mid'       => $mid,
+            'start_key' => Rpgcalendar_Engine::dateKey((int)$data['start_year'], (int)$data['start_month'], (int)$data['start_day']),
+            'end_key'   => Rpgcalendar_Engine::dateKey((int)$data['end_year'], (int)$data['end_month'], (int)$data['end_day']),
+        ]);
+        rpgcalendar_acp_moon_form($rpgcalendar_db, $values, $errors, ($mid > 0) ? 'do_edit_moon' : 'do_add_moon', ($mid > 0) ? 'edit_moon' : 'add_moon');
+        exit;
+    }
+
+    $rpgcalendar_db->saveMoon($data, $mid);
+    flash_message($lang->rpgcalendar_saved, 'success');
+    admin_redirect('index.php?module=tools-rpgcalendar&action=moon');
+}
+
+if ($action === 'delete_moon' && $mybb->request_method === 'post') {
+    $mid = $mybb->get_input('mid', MyBB::INPUT_INT);
+    if (!$rpgcalendar_db->getMoon($mid)) {
+        flash_message($lang->rpgcalendar_error_not_found, 'error');
+    } else {
+        $rpgcalendar_db->deleteMoon($mid);
+        flash_message($lang->rpgcalendar_deleted, 'success');
+    }
+    admin_redirect('index.php?module=tools-rpgcalendar&action=moon');
+}
+
+if ($action === 'delete_auto_moon' && $mybb->request_method === 'post') {
+    $loc = $mybb->get_input('filter_loc', MyBB::INPUT_INT);
+    $rpgcalendar_db->deleteAutoMoon($loc);
+    flash_message($lang->rpgcalendar_delete_auto_done, 'success');
+    admin_redirect('index.php?module=tools-rpgcalendar&action=moon&filter_loc=' . $loc);
 }
 
 /** Builds a suggested month text from a location's weather + holidays. */
@@ -1263,6 +1455,8 @@ if ($action === 'add_location') {
     rpgcalendar_acp_location_form([
         'locid' => 0, 'name' => '', 'type' => 0, 'country' => '', 'city' => '',
         'lat' => 0, 'lon' => 0, 'disporder' => 0, 'visible' => 1,
+        'moon_enabled' => 0, 'moon_cycle' => Rpgcalendar_Generator::SYNODIC_MONTH,
+        'moon_ref_year' => 2000, 'moon_ref_month' => 1, 'moon_ref_day' => 6, 'moon_ref_phase' => 0,
     ], [], 'do_add_location', 'add_location');
     exit;
 }
@@ -1325,9 +1519,15 @@ if ($action === 'locations') {
     }
     $table->output($lang->rpgcalendar_tab_locations);
 
-    // Generate form for real locations (weather + holidays from real sources).
-    $real_options = rpgcalendar_acp_location_options($rpgcalendar_db, false, true);
-    if ($real_options) {
+    // Generate form: real locations (weather + holidays from real sources) plus
+    // any moon-enabled location (moon phases, computed locally for any year).
+    $gen_options = [];
+    foreach ($locations as $loc) {
+        if ((int)$loc['type'] === 1 || (int)$loc['moon_enabled'] === 1) {
+            $gen_options[(int)$loc['locid']] = $loc['name'];
+        }
+    }
+    if ($gen_options) {
         list($min_year, $max_year) = rpgcalendar_acp_year_bounds();
         $cur = (int)my_date('Y');
         $cur = max($min_year, min($max_year, $cur));
@@ -1337,7 +1537,7 @@ if ($action === 'locations') {
         $gc->output_row(
             $lang->rpgcalendar_field_location,
             $lang->rpgcalendar_generate_desc,
-            $gform->generate_select_box('locid', $real_options, [0], ['id' => 'gen_locid'])
+            $gform->generate_select_box('locid', $gen_options, [0], ['id' => 'gen_locid'])
             . ' ' . $gform->generate_numeric_field('from_year', $cur, ['min' => $min_year, 'max' => $max_year, 'style' => 'width: 90px'])
             . ' &ndash; ' . $gform->generate_numeric_field('to_year', $cur, ['min' => $min_year, 'max' => $max_year, 'style' => 'width: 90px']),
             'gen_locid'
@@ -1559,6 +1759,113 @@ if ($action === 'holidays') {
     if ($total > $perpage) {
         echo draw_admin_pagination($page_num, $perpage, $total,
             'index.php?module=tools-rpgcalendar&amp;action=holidays&amp;filter_loc=' . $filter_loc . '&amp;page={page}');
+    }
+
+    $page->output_footer();
+    exit;
+}
+
+// --- Moon views ---
+
+if ($action === 'add_moon') {
+    rpgcalendar_acp_moon_form($rpgcalendar_db, array_merge(rpgcalendar_acp_dated_defaults(), [
+        'mid' => 0, 'locid' => 0, 'phase' => '', 'note' => '',
+    ]), [], 'do_add_moon', 'add_moon');
+    exit;
+}
+
+if ($action === 'edit_moon') {
+    $mid = $mybb->get_input('mid', MyBB::INPUT_INT);
+    $row = $rpgcalendar_db->getMoon($mid);
+    if (!$row) {
+        flash_message($lang->rpgcalendar_error_not_found, 'error');
+        admin_redirect('index.php?module=tools-rpgcalendar&action=moon');
+    }
+    rpgcalendar_acp_moon_form($rpgcalendar_db, $row, [], 'do_edit_moon', 'edit_moon');
+    exit;
+}
+
+if ($action === 'moon') {
+    $page->output_header($lang->rpgcalendar);
+    rpgcalendar_acp_tabs('moon');
+
+    echo '<p><a href="index.php?module=tools-rpgcalendar&amp;action=add_moon">&#43; '
+        . $lang->rpgcalendar_tab_add_moon . '</a></p>';
+
+    $flt = $mybb->get_input('filter_loc', MyBB::INPUT_INT);
+    echo '<form action="index.php" method="post" style="margin: 0 0 10px;">'
+        . '<input type="hidden" name="module" value="tools-rpgcalendar" />'
+        . '<input type="hidden" name="action" value="delete_auto_moon" />'
+        . '<input type="hidden" name="filter_loc" value="' . $flt . '" />'
+        . '<input type="hidden" name="my_post_key" value="' . $mybb->post_code . '" />'
+        . '<input type="submit" class="submit_button" value="' . $lang->rpgcalendar_delete_auto
+        . '" onclick="return confirm(\'' . $lang->rpgcalendar_confirm_delete_auto . '\');" /></form>';
+
+    $names = [];
+    foreach ($rpgcalendar_db->listLocations() as $loc) {
+        $names[(int)$loc['locid']] = $loc['name'];
+    }
+
+    $filter_loc = $mybb->get_input('filter_loc', MyBB::INPUT_INT);
+    if ($names) {
+        echo '<form action="index.php" method="get" style="margin-bottom: 8px;">'
+            . '<input type="hidden" name="module" value="tools-rpgcalendar" />'
+            . '<input type="hidden" name="action" value="moon" />'
+            . '<select name="filter_loc"><option value="0">' . $lang->rpgcalendar_filter_all_locations . '</option>';
+        foreach ($names as $lid => $lname) {
+            $sel = ($lid === $filter_loc) ? ' selected="selected"' : '';
+            echo '<option value="' . $lid . '"' . $sel . '>' . htmlspecialchars_uni($lname) . '</option>';
+        }
+        echo '</select> <input type="submit" class="submit_button" value="' . $lang->rpgcalendar_filter . '" /></form>';
+    }
+
+    $perpage  = 30;
+    $page_num = max(1, $mybb->get_input('page', MyBB::INPUT_INT));
+    $total    = $rpgcalendar_db->countMoon($filter_loc);
+    $offset   = ($page_num - 1) * $perpage;
+
+    $table = new Table();
+    $table->construct_header($lang->rpgcalendar_th_date, ['width' => '18%']);
+    $table->construct_header($lang->rpgcalendar_th_location, ['width' => '18%']);
+    $table->construct_header($lang->rpgcalendar_th_phase);
+    $table->construct_header($lang->rpgcalendar_th_source, ['width' => '10%', 'class' => 'align_center']);
+    $table->construct_header($lang->rpgcalendar_th_controls, ['width' => '18%', 'class' => 'align_center']);
+
+    foreach ($rpgcalendar_db->listMoon($filter_loc, $offset, $perpage) as $row) {
+        $mid = (int)$row['mid'];
+        $delete_form = '<form action="index.php" method="post" style="display:inline">'
+            . '<input type="hidden" name="module" value="tools-rpgcalendar" />'
+            . '<input type="hidden" name="action" value="delete_moon" />'
+            . '<input type="hidden" name="mid" value="' . $mid . '" />'
+            . '<input type="hidden" name="my_post_key" value="' . $mybb->post_code . '" />'
+            . '<input type="submit" class="submit_button" value="' . $lang->rpgcalendar_delete . '" />'
+            . '</form>';
+
+        $date = rpgcalendar_acp_format_date($row);
+        if ((int)$row['yearly'] === 1) {
+            $date .= ' <span class="smalltext">(' . $lang->rpgcalendar_yearly_short . ')</span>';
+        }
+
+        $table->construct_cell($date);
+        $table->construct_cell(htmlspecialchars_uni($names[(int)$row['locid']] ?? ('#' . (int)$row['locid'])));
+        $table->construct_cell(htmlspecialchars_uni(rpgcalendar_acp_mphase_label((string)$row['phase'])) . ($row['note'] !== '' ? ' <span class="smalltext">' . htmlspecialchars_uni($row['note']) . '</span>' : ''));
+        $table->construct_cell(htmlspecialchars_uni($row['source']), ['class' => 'align_center']);
+        $table->construct_cell(
+            '<a href="index.php?module=tools-rpgcalendar&amp;action=edit_moon&amp;mid=' . $mid . '">'
+            . $lang->rpgcalendar_edit . '</a> &nbsp; ' . $delete_form,
+            ['class' => 'align_center']
+        );
+        $table->construct_row();
+    }
+    if (!$total) {
+        $table->construct_cell($lang->rpgcalendar_no_moon, ['colspan' => 5, 'class' => 'align_center']);
+        $table->construct_row();
+    }
+    $table->output($lang->rpgcalendar_tab_moon);
+
+    if ($total > $perpage) {
+        echo draw_admin_pagination($page_num, $perpage, $total,
+            'index.php?module=tools-rpgcalendar&amp;action=moon&amp;filter_loc=' . $filter_loc . '&amp;page={page}');
     }
 
     $page->output_footer();

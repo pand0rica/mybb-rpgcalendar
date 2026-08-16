@@ -26,10 +26,12 @@ $l['rpgcalendar_source_plot']     = "Plot";
 $l['rpgcalendar_source_ics']      = "Extern";
 $l['rpgcalendar_source_weather']  = "Wetter";
 $l['rpgcalendar_source_holiday']  = "Feiertag";
+$l['rpgcalendar_source_moon']     = "Mond";
 
-// Wetter- & Feiertagskalender (v1.2) – auch die Kalendernamen unter "Meine Kalender"
+// Wetter-, Feiertags- & Mondkalender (v1.2/1.3) – auch die Kalendernamen unter "Meine Kalender"
 $l['rpgcalendar_cal_weather'] = "Wetter";
 $l['rpgcalendar_cal_holiday'] = "Feiertage";
+$l['rpgcalendar_cal_moon']    = "Mond";
 
 // Hinweis bei fehlenden Daten (fiktive Orte)
 $l['rpgcalendar_hint_title'] = "Fehlende Kalenderdaten";
@@ -43,10 +45,18 @@ $l['rpgcalendar_wcond_rain']    = "Regen";
 $l['rpgcalendar_wcond_snow']    = "Schnee";
 $l['rpgcalendar_wcond_thunder'] = "Gewitter";
 
-// Wetter-/Feiertags-Detailansicht
+// Mondphasen-Bezeichnungen (Text-Fallback, wenn kein Bild vorhanden ist)
+$l['rpgcalendar_mphase_new']    = "Neumond";
+$l['rpgcalendar_mphase_waxing'] = "Zunehmender Halbmond";
+$l['rpgcalendar_mphase_full']   = "Vollmond";
+$l['rpgcalendar_mphase_waning'] = "Abnehmender Halbmond";
+
+// Wetter-/Feiertags-/Mond-Detailansicht
 $l['rpgcalendar_weather_in']       = "Wetter in {1}.";
 $l['rpgcalendar_holiday_in']       = "Feiertag in {1}.";
+$l['rpgcalendar_moon_in']          = "Mondphase in {1}.";
 $l['rpgcalendar_detail_condition'] = "Wetter:";
+$l['rpgcalendar_detail_phase']     = "Mondphase:";
 $l['rpgcalendar_detail_temp']      = "Temperatur:";
 $l['rpgcalendar_detail_notfound']  = "Dieser Eintrag existiert nicht.";
 $l['rpgcalendar_wiki_more']        = "Ganzer Artikel auf Wikipedia &rarr;";

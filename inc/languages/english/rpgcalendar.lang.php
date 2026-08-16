@@ -26,10 +26,12 @@ $l['rpgcalendar_source_plot']     = "Plot";
 $l['rpgcalendar_source_ics']      = "External";
 $l['rpgcalendar_source_weather']  = "Weather";
 $l['rpgcalendar_source_holiday']  = "Holiday";
+$l['rpgcalendar_source_moon']     = "Moon";
 
-// Weather & holiday calendars (v1.2) – also the calendar names on "My calendars"
+// Weather, holiday & moon calendars (v1.2/1.3) – also the calendar names on "My calendars"
 $l['rpgcalendar_cal_weather'] = "Weather";
 $l['rpgcalendar_cal_holiday'] = "Holidays";
+$l['rpgcalendar_cal_moon']    = "Moon";
 
 // Missing-data hint for fictional locations
 $l['rpgcalendar_hint_title'] = "Missing calendar data";
@@ -43,10 +45,18 @@ $l['rpgcalendar_wcond_rain']    = "Rain";
 $l['rpgcalendar_wcond_snow']    = "Snow";
 $l['rpgcalendar_wcond_thunder'] = "Thunderstorm";
 
-// Weather/holiday detail view
+// Moon phase labels (text fallback when no image exists)
+$l['rpgcalendar_mphase_new']    = "New moon";
+$l['rpgcalendar_mphase_waxing'] = "Waxing half moon";
+$l['rpgcalendar_mphase_full']   = "Full moon";
+$l['rpgcalendar_mphase_waning'] = "Waning half moon";
+
+// Weather/holiday/moon detail view
 $l['rpgcalendar_weather_in']       = "Weather in {1}.";
 $l['rpgcalendar_holiday_in']       = "Public holiday in {1}.";
+$l['rpgcalendar_moon_in']          = "Moon phase in {1}.";
 $l['rpgcalendar_detail_condition'] = "Weather:";
+$l['rpgcalendar_detail_phase']     = "Moon phase:";
 $l['rpgcalendar_detail_temp']      = "Temperature:";
 $l['rpgcalendar_detail_notfound']  = "This entry does not exist.";
 $l['rpgcalendar_wiki_more']        = "Full article on Wikipedia &rarr;";

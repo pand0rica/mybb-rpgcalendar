@@ -35,6 +35,18 @@ class Rpgcalendar_Generator
     /** Climate model used for the long-range fallback. */
     const CLIMATE_MODEL = 'MRI_AGCM3_2_S';
 
+    /** Mean synodic month (days) – Earth's real lunar cycle. */
+    const SYNODIC_MONTH = 29.530588853;
+
+    /**
+     * Fraction of a day past midnight (UTC) of the reference new moon
+     * 2000-01-06 18:14 UTC, so real-location phases land on the right day.
+     */
+    const REF_NEWMOON_FRACTION = 0.76;
+
+    /** Safety cap on generated moon rows per run (runaway-loop guard). */
+    const MOON_ROW_CAP = 20000;
+
     /** @var Rpgcalendar_Database */
     private $database;
 
@@ -209,6 +221,105 @@ class Rpgcalendar_Generator
         }
 
         return ['weather' => $weather_count, 'holidays' => $holiday_count, 'errors' => $this->errors];
+    }
+
+    // -------------------------------------------------------------------
+    // Moon phases (pure math – no HTTP, works for any year)
+    // -------------------------------------------------------------------
+
+    /** The four principal phase slugs, indexed 0=new..3=waning. @return string[] */
+    public static function moonPhaseSlugs(): array
+    {
+        return ['new', 'waxing', 'full', 'waning'];
+    }
+
+    /**
+     * (Re)generates the four principal moon phases for a location across a whole
+     * year range and materialises them as editable 'auto' rows. Unlike weather
+     * this needs no external API and supports any (incl. negative/fictional)
+     * year. Real locations use the true Earth constants anchored to the real
+     * date; fictional locations use their own cycle length + reference phase.
+     *
+     * @return int number of phase rows written (0 with an error string on failure)
+     */
+    public function generateMoonForLocation(int $locid, int $from_year, int $to_year): int
+    {
+        $location = $this->database->getLocation($locid);
+        if (!$location) {
+            $this->errors[] = 'location-not-found';
+
+            return 0;
+        }
+        if ((int)$location['moon_enabled'] !== 1) {
+            $this->errors[] = 'moon-disabled';
+
+            return 0;
+        }
+        if ($from_year > $to_year) {
+            list($from_year, $to_year) = [$to_year, $from_year];
+        }
+
+        // Cycle length + the (fractional) day number of a reference new moon.
+        if ((int)$location['type'] === 1) {
+            $cycle   = self::SYNODIC_MONTH;
+            $ref_new = Rpgcalendar_Engine::dayNumber(2000, 1, 6) + self::REF_NEWMOON_FRACTION;
+        } else {
+            $cycle = (float)$location['moon_cycle'];
+            if ($cycle < 1.0) {
+                $cycle = self::SYNODIC_MONTH; // guard against a broken config
+            }
+            $ref_phase = (int)$location['moon_ref_phase'];
+            $ref_day   = Rpgcalendar_Engine::dayNumber(
+                (int)$location['moon_ref_year'],
+                max(1, min(12, (int)$location['moon_ref_month'])),
+                max(1, min(31, (int)$location['moon_ref_day']))
+            );
+            // The reference date carries phase $ref_phase; the new moon is that
+            // many quarter-cycles earlier.
+            $ref_new = $ref_day - $ref_phase * ($cycle / 4.0);
+        }
+
+        $from_n   = Rpgcalendar_Engine::dayNumber($from_year, 1, 1);
+        $to_n     = Rpgcalendar_Engine::dayNumber($to_year, 12, 31);
+        $from_key = Rpgcalendar_Engine::dateKey($from_year, 1, 1);
+        $to_key   = Rpgcalendar_Engine::dateKey($to_year, 12, 31);
+
+        $this->database->deleteAutoMoonInRange($locid, $from_key, $to_key);
+
+        $quarter = $cycle / 4.0;
+        $slugs   = self::moonPhaseSlugs();
+
+        // The m-th principal phase instant sits at ref_new + m*quarter; the day
+        // that hosts it is floor(instant). Enumerate the m that fall in range.
+        $m_lo = (int)ceil(($from_n - $ref_new) / $quarter);
+        $m_hi = (int)floor(($to_n + 1 - $ref_new) / $quarter);
+
+        $count = 0;
+        for ($m = $m_lo; $m <= $m_hi; $m++) {
+            if ($count >= self::MOON_ROW_CAP) {
+                $this->errors[] = 'moon-capped';
+                break;
+            }
+            $dn = (int)floor($ref_new + $m * $quarter);
+            if ($dn < $from_n || $dn > $to_n) {
+                continue;
+            }
+            $ymd         = Rpgcalendar_Engine::fromDayNumber($dn);
+            $phase_index = (($m % 4) + 4) % 4;
+            $this->database->saveMoon([
+                'locid'       => $locid,
+                'source'      => 'auto',
+                'phase'       => $slugs[$phase_index],
+                'start_year'  => $ymd['y'], 'start_month' => $ymd['m'], 'start_day' => $ymd['d'],
+                'end_year'    => $ymd['y'], 'end_month'   => $ymd['m'], 'end_day'   => $ymd['d'],
+                'yearly'      => 0,
+                'note'        => '',
+                'visible'     => 1,
+            ]);
+            $count++;
+        }
+
+        return $count;
     }
 
     // -------------------------------------------------------------------

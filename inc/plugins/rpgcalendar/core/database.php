@@ -796,14 +796,20 @@ class Rpgcalendar_Database
     {
         $row = [];
         $map = [
-            'name'      => 'string',
-            'type'      => 'int',
-            'country'   => 'string',
-            'city'      => 'string',
-            'lat'       => 'float',
-            'lon'       => 'float',
-            'disporder' => 'int',
-            'visible'   => 'int',
+            'name'           => 'string',
+            'type'           => 'int',
+            'country'        => 'string',
+            'city'           => 'string',
+            'lat'            => 'float',
+            'lon'            => 'float',
+            'moon_enabled'   => 'int',
+            'moon_cycle'     => 'float',
+            'moon_ref_year'  => 'int',
+            'moon_ref_month' => 'int',
+            'moon_ref_day'   => 'int',
+            'moon_ref_phase' => 'int',
+            'disporder'      => 'int',
+            'visible'        => 'int',
         ];
         foreach ($map as $key => $type) {
             if (!array_key_exists($key, $data)) {
@@ -831,15 +837,17 @@ class Rpgcalendar_Database
         return (int)$this->db->insert_query('rpgcalendar_locations', $row);
     }
 
-    /** Deletes a location and its weather/holidays; clears its calendar prefs. */
+    /** Deletes a location and its weather/holidays/moon; clears its calendar prefs. */
     public function deleteLocation(int $locid): void
     {
         $locid = (int)$locid;
         $this->db->delete_query('rpgcalendar_locations', 'locid = ' . $locid);
         $this->db->delete_query('rpgcalendar_weather', 'locid = ' . $locid);
         $this->db->delete_query('rpgcalendar_holidays', 'locid = ' . $locid);
+        $this->db->delete_query('rpgcalendar_moonphases', 'locid = ' . $locid);
         $this->db->delete_query('rpgcalendar_calendar_prefs',
-            "calendar_key = 'weather-" . $locid . "' OR calendar_key = 'holiday-" . $locid . "'");
+            "calendar_key = 'weather-" . $locid . "' OR calendar_key = 'holiday-" . $locid
+            . "' OR calendar_key = 'moon-" . $locid . "'");
     }
 
     // -------------------------------------------------------------------
@@ -1084,6 +1092,133 @@ class Rpgcalendar_Database
         $where = ($locid !== 0) ? 'locid = ' . (int)$locid : '1=1';
         $query = $this->db->simple_select(
             'rpgcalendar_holidays', '*', $where,
+            [
+                'order_by'    => 'start_key',
+                'order_dir'   => 'DESC',
+                'limit_start' => max(0, (int)$offset),
+                'limit'       => max(1, (int)$perpage),
+            ]
+        );
+
+        $rows = [];
+        while ($row = $this->db->fetch_array($query)) {
+            $rows[] = $row;
+        }
+
+        return $rows;
+    }
+
+    // -------------------------------------------------------------------
+    // Moon sub-calendar
+    // -------------------------------------------------------------------
+
+    /**
+     * @param int[] $locids
+     * @return array[]
+     */
+    public function getMoonForMonthView(int $month_start_key, int $month_end_key, array $locids): array
+    {
+        $ids = $this->intListOrEmpty($locids);
+        if ($ids === '') {
+            return [];
+        }
+
+        $query = $this->db->query("
+            SELECT *
+            FROM " . TABLE_PREFIX . "rpgcalendar_moonphases
+            WHERE visible = 1
+              AND locid IN ({$ids})
+              AND (
+                    (yearly = 0 AND start_key <= {$month_end_key} AND end_key >= {$month_start_key})
+                 OR (yearly = 1 AND start_key <= {$month_end_key})
+              )
+        ");
+
+        $rows = [];
+        while ($row = $this->db->fetch_array($query)) {
+            $rows[] = $row;
+        }
+
+        return $rows;
+    }
+
+    public function getMoon(int $mid): ?array
+    {
+        $row = $this->db->fetch_array($this->db->simple_select(
+            'rpgcalendar_moonphases', '*', 'mid = ' . (int)$mid
+        ));
+
+        return $row ?: null;
+    }
+
+    public function saveMoon(array $data, int $mid = 0): int
+    {
+        $row = [
+            'locid'       => (int)$data['locid'],
+            'source'      => $this->db->escape_string((string)($data['source'] ?? 'manual')),
+            'phase'       => $this->db->escape_string((string)($data['phase'] ?? '')),
+            'start_year'  => (int)$data['start_year'],
+            'start_month' => (int)$data['start_month'],
+            'start_day'   => (int)$data['start_day'],
+            'end_year'    => (int)$data['end_year'],
+            'end_month'   => (int)$data['end_month'],
+            'end_day'     => (int)$data['end_day'],
+            'start_key'   => Rpgcalendar_Engine::dateKey((int)$data['start_year'], (int)$data['start_month'], (int)$data['start_day']),
+            'end_key'     => Rpgcalendar_Engine::dateKey((int)$data['end_year'], (int)$data['end_month'], (int)$data['end_day']),
+            'yearly'      => empty($data['yearly']) ? 0 : 1,
+            'note'        => $this->db->escape_string((string)($data['note'] ?? '')),
+            'visible'     => empty($data['visible']) ? 0 : 1,
+        ];
+
+        if ($mid > 0) {
+            $this->db->update_query('rpgcalendar_moonphases', $row, 'mid = ' . (int)$mid);
+
+            return $mid;
+        }
+
+        $row['dateline'] = TIME_NOW;
+
+        return (int)$this->db->insert_query('rpgcalendar_moonphases', $row);
+    }
+
+    public function deleteMoon(int $mid): void
+    {
+        $this->db->delete_query('rpgcalendar_moonphases', 'mid = ' . (int)$mid);
+    }
+
+    public function deleteAutoMoonInRange(int $locid, int $from_key, int $to_key): void
+    {
+        $this->db->delete_query('rpgcalendar_moonphases',
+            "source = 'auto' AND locid = " . (int)$locid
+            . ' AND start_key >= ' . (int)$from_key . ' AND start_key <= ' . (int)$to_key);
+    }
+
+    /** Deletes all generated (auto) moon rows, optionally for one location. */
+    public function deleteAutoMoon(int $locid = 0): void
+    {
+        $where = "source = 'auto'";
+        if ($locid > 0) {
+            $where .= ' AND locid = ' . (int)$locid;
+        }
+        $this->db->delete_query('rpgcalendar_moonphases', $where);
+    }
+
+    public function countMoon(int $locid = 0): int
+    {
+        $where = ($locid !== 0) ? 'locid = ' . (int)$locid : '1=1';
+        $row = $this->db->fetch_array($this->db->simple_select(
+            'rpgcalendar_moonphases', 'COUNT(*) AS num', $where
+        ));
+
+        return isset($row['num']) ? (int)$row['num'] : 0;
+    }
+
+    /** @return array[] */
+    public function listMoon(int $locid = 0, int $offset = 0, int $perpage = 30): array
+    {
+        $where = ($locid !== 0) ? 'locid = ' . (int)$locid : '1=1';
+        $query = $this->db->simple_select(
+            'rpgcalendar_moonphases', '*', $where,
             [
                 'order_by'    => 'start_key',
                 'order_dir'   => 'DESC',

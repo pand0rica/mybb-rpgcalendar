@@ -118,7 +118,12 @@
     background: rgba(236, 72, 153, 0.12);
 }
 
-/* Weather/holiday chip icon */
+.rpgcalendar_event--moon {
+    border-left-color: #94a3b8;
+    background: rgba(148, 163, 184, 0.12);
+}
+
+/* Weather/holiday/moon chip icon */
 .rpgcalendar_wicon {
     height: 3em;
     width: auto;

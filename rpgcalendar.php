@@ -119,6 +119,80 @@ function rpgcalendar_weather_symbol(string $slug, string $label, int $seed = 0):
     return '<img src="' . $src . '" alt="' . $alt . '" title="' . $alt . '" class="rpgcalendar_wicon" /> ';
 }
 
+/** Localized label for a moon phase slug (falls back to the raw slug). */
+function rpgcalendar_moon_label(string $slug): string
+{
+    global $lang;
+
+    $key = 'rpgcalendar_mphase_' . preg_replace('/[^a-z0-9_]/', '', $slug);
+
+    return (isset($lang->$key) && $lang->$key !== '') ? $lang->$key : $slug;
+}
+
+/**
+ * All image URLs for a moon phase, keyed by slug. Mirrors the weather image
+ * scan (base name + dash-suffixed variants) but on the moon image directory.
+ * @return array slug => string[] (sorted URLs)
+ */
+function rpgcalendar_moon_images(): array
+{
+    global $mybb;
+    static $variants = null;
+
+    if ($variants !== null) {
+        return $variants;
+    }
+
+    $variants = [];
+    $dir = isset($mybb->settings['rpgcalendar_moon_imagedir'])
+        ? trim((string)$mybb->settings['rpgcalendar_moon_imagedir']) : '';
+    $dir = trim($dir, '/');
+    $abs = MYBB_ROOT . $dir;
+    if ($dir === '' || !is_dir($abs)) {
+        return $variants;
+    }
+
+    $exts = ['png', 'gif', 'jpg', 'jpeg', 'svg', 'webp'];
+    foreach ((array)scandir($abs) as $file) {
+        if (!preg_match('/^([a-z0-9_]+)(?:-[^.]+)?\.([a-z0-9]+)$/i', $file, $m)) {
+            continue;
+        }
+        if (!in_array(strtolower($m[2]), $exts, true)) {
+            continue;
+        }
+        $variants[strtolower($m[1])][] = $mybb->settings['bburl'] . '/' . $dir . '/' . $file;
+    }
+    foreach ($variants as &$list) {
+        sort($list);
+    }
+    unset($list);
+
+    return $variants;
+}
+
+/**
+ * <img> markup for a moon phase. If several variant images exist for the slug,
+ * one is picked deterministically from $seed. Empty string if no image exists
+ * (caller shows text). Includes a trailing space.
+ */
+function rpgcalendar_moon_symbol(string $slug, string $label, int $seed = 0): string
+{
+    $slug = preg_replace('/[^a-z0-9_]/', '', strtolower($slug));
+    if ($slug === '') {
+        return '';
+    }
+    $images = rpgcalendar_moon_images();
+    if (empty($images[$slug])) {
+        return '';
+    }
+
+    $list = $images[$slug];
+    $src  = htmlspecialchars_uni($list[abs($seed) % count($list)]);
+    $alt  = htmlspecialchars_uni($label);
+
+    return '<img src="' . $src . '" alt="' . $alt . '" title="' . $alt . '" class="rpgcalendar_wicon" /> ';
+}
+
 /** Markup for the single global holiday symbol (image URL or emoji/text). */
 function rpgcalendar_holiday_symbol(): string
 {
@@ -427,6 +501,11 @@ if ($rpgcalendar_action === 'day') {
             $wnote  = (string)($event['note'] ?? '');
             $title_text = rpgcalendar_weather_symbol((string)$event['condition'], $wlabel, (int)($event['wid'] ?? 0))
                 . htmlspecialchars_uni(trim($wlabel . ($wnote !== '' ? ', ' . $wnote : '')));
+        } elseif (($event['source'] ?? '') === 'moon') {
+            $mlabel = rpgcalendar_moon_label((string)$event['condition']);
+            $mnote  = (string)($event['note'] ?? '');
+            $title_text = rpgcalendar_moon_symbol((string)$event['condition'], $mlabel, (int)($event['mid'] ?? 0))
+                . htmlspecialchars_uni(trim($mlabel . ($mnote !== '' ? ', ' . $mnote : '')));
         } elseif (($event['source'] ?? '') === 'holiday') {
             $title_text = rpgcalendar_holiday_symbol() . $title_text;
         }
@@ -1305,13 +1384,18 @@ if ($rpgcalendar_action === 'event') {
     exit;
 }
 
-// Weather / holiday detail view (reuses the rpgcalendar_event template). Renders a
-// short, localized description text for a single weather or holiday entry.
-if ($rpgcalendar_action === 'weatherinfo' || $rpgcalendar_action === 'holidayinfo') {
+// Weather / holiday / moon detail view (reuses the rpgcalendar_event template).
+// Renders a short, localized description for a single celestial/holiday entry.
+if ($rpgcalendar_action === 'weatherinfo' || $rpgcalendar_action === 'holidayinfo' || $rpgcalendar_action === 'mooninfo') {
     $is_weather = ($rpgcalendar_action === 'weatherinfo');
-    $row = $is_weather
-        ? $rpgcalendar_database->getWeather($mybb->get_input('wid', MyBB::INPUT_INT))
-        : $rpgcalendar_database->getHoliday($mybb->get_input('hid', MyBB::INPUT_INT));
+    $is_moon    = ($rpgcalendar_action === 'mooninfo');
+    if ($is_weather) {
+        $row = $rpgcalendar_database->getWeather($mybb->get_input('wid', MyBB::INPUT_INT));
+    } elseif ($is_moon) {
+        $row = $rpgcalendar_database->getMoon($mybb->get_input('mid', MyBB::INPUT_INT));
+    } else {
+        $row = $rpgcalendar_database->getHoliday($mybb->get_input('hid', MyBB::INPUT_INT));
+    }
     if ($row === null || (int)$row['visible'] !== 1) {
         error($lang->rpgcalendar_detail_notfound);
     }
@@ -1347,6 +1431,17 @@ if ($rpgcalendar_action === 'weatherinfo' || $rpgcalendar_action === 'holidayinf
         }
         if ((string)$row['note'] !== '') {
             $parts[] = $lang->rpgcalendar_detail_temp . ' ' . htmlspecialchars_uni((string)$row['note']);
+        }
+    } elseif ($is_moon) {
+        $label             = rpgcalendar_moon_label((string)$row['phase']);
+        $event_title_plain = $label;
+        $event_title       = rpgcalendar_moon_symbol((string)$row['phase'], $label, (int)$row['mid']) . htmlspecialchars_uni($label);
+        $parts[] = $lang->rpgcalendar_detail_phase . ' ' . htmlspecialchars_uni($label);
+        if ($locname !== '') {
+            $parts[] = $lang->sprintf($lang->rpgcalendar_moon_in, $locname);
+        }
+        if ((string)$row['note'] !== '') {
+            $parts[] = htmlspecialchars_uni((string)$row['note']);
         }
     } else {
         $event_title_plain = (string)$row['title'];
@@ -1392,7 +1487,7 @@ if ($rpgcalendar_action === 'weatherinfo' || $rpgcalendar_action === 'holidayinf
     } else {
         $event_backurl = 'rpgcalendar.php?year=' . $y . '&amp;month=' . $m;
     }
-    $kind_label      = $is_weather ? $lang->rpgcalendar_cal_weather : $lang->rpgcalendar_cal_holiday;
+    $kind_label      = $is_weather ? $lang->rpgcalendar_cal_weather : ($is_moon ? $lang->rpgcalendar_cal_moon : $lang->rpgcalendar_cal_holiday);
     $event_pagetitle = $lang->rpgcalendar_title . ' - ' . $kind_label . ': ' . $event_title_plain;
     add_breadcrumb($event_title_plain);
 
@@ -1466,6 +1561,9 @@ if (!empty($month_data['hints']) && (int)($mybb->settings['rpgcalendar_weather_h
         }
         if (!empty($h['holiday'])) {
             $kinds[] = $lang->rpgcalendar_cal_holiday;
+        }
+        if (!empty($h['moon'])) {
+            $kinds[] = $lang->rpgcalendar_cal_moon;
         }
         $line = $lang->sprintf(
             $lang->rpgcalendar_hint_line,
@@ -1546,6 +1644,17 @@ foreach ($month_data['grid'] as $week) {
                 $visible_text = ($wnote !== '') ? $wnote : (($event_symbol === '') ? $wlabel : '');
                 $event_title  = htmlspecialchars_uni($visible_text);
                 $tip = $wlabel . ($wnote !== '' ? ', ' . $wnote : '');
+                if (($event['locname'] ?? '') !== '') {
+                    $tip = $event['locname'] . ': ' . $tip;
+                }
+                $event_title_attr = htmlspecialchars_uni($tip);
+            } elseif ($event_source === 'moon') {
+                $mlabel = rpgcalendar_moon_label((string)$event['condition']);
+                $mnote  = (string)($event['note'] ?? '');
+                $event_symbol = rpgcalendar_moon_symbol((string)$event['condition'], $mlabel, (int)($event['mid'] ?? 0));
+                $visible_text = ($mnote !== '') ? $mnote : (($event_symbol === '') ? $mlabel : '');
+                $event_title  = htmlspecialchars_uni($visible_text);
+                $tip = $mlabel . ($mnote !== '' ? ', ' . $mnote : '');
                 if (($event['locname'] ?? '') !== '') {
                     $tip = $event['locname'] . ': ' . $tip;
                 }

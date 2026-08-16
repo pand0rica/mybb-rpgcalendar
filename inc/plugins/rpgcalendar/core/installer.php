@@ -128,19 +128,28 @@ class Rpgcalendar_Installer
         ) ENGINE=InnoDB{$collation};");
 
         // v1.2 – play locations with per-location weather/holiday sub-calendars.
-        // Each location exposes two virtual calendars 'weather-{locid}' and
-        // 'holiday-{locid}' handled by the existing calendar_prefs visibility/colour.
+        // Each location exposes virtual calendars 'weather-{locid}',
+        // 'holiday-{locid}' and 'moon-{locid}', all handled by the existing
+        // calendar_prefs visibility/colour. The moon_* columns configure the
+        // lunar cycle: real locations use fixed Earth constants, fictional ones
+        // a freely chosen cycle length + a reference phase date.
         $db->query("CREATE TABLE IF NOT EXISTS `" . TABLE_PREFIX . "rpgcalendar_locations` (
-            `locid`     INT UNSIGNED NOT NULL AUTO_INCREMENT,
-            `name`      VARCHAR(120) NOT NULL DEFAULT '',
-            `type`      TINYINT(1) NOT NULL DEFAULT 0,
-            `country`   VARCHAR(2) NOT NULL DEFAULT '',
-            `city`      VARCHAR(120) NOT NULL DEFAULT '',
-            `lat`       DECIMAL(8,4) NOT NULL DEFAULT 0,
-            `lon`       DECIMAL(8,4) NOT NULL DEFAULT 0,
-            `disporder` INT UNSIGNED NOT NULL DEFAULT 0,
-            `visible`   TINYINT(1) NOT NULL DEFAULT 1,
-            `dateline`  INT UNSIGNED NOT NULL DEFAULT 0,
+            `locid`          INT UNSIGNED NOT NULL AUTO_INCREMENT,
+            `name`           VARCHAR(120) NOT NULL DEFAULT '',
+            `type`           TINYINT(1) NOT NULL DEFAULT 0,
+            `country`        VARCHAR(2) NOT NULL DEFAULT '',
+            `city`           VARCHAR(120) NOT NULL DEFAULT '',
+            `lat`            DECIMAL(8,4) NOT NULL DEFAULT 0,
+            `lon`            DECIMAL(8,4) NOT NULL DEFAULT 0,
+            `moon_enabled`   TINYINT(1) NOT NULL DEFAULT 0,
+            `moon_cycle`     DECIMAL(9,5) NOT NULL DEFAULT 29.53059,
+            `moon_ref_year`  SMALLINT NOT NULL DEFAULT 2000,
+            `moon_ref_month` TINYINT UNSIGNED NOT NULL DEFAULT 1,
+            `moon_ref_day`   TINYINT UNSIGNED NOT NULL DEFAULT 6,
+            `moon_ref_phase` TINYINT UNSIGNED NOT NULL DEFAULT 0,
+            `disporder`      INT UNSIGNED NOT NULL DEFAULT 0,
+            `visible`        TINYINT(1) NOT NULL DEFAULT 1,
+            `dateline`       INT UNSIGNED NOT NULL DEFAULT 0,
             PRIMARY KEY (`locid`)
         ) ENGINE=InnoDB{$collation};");
 
@@ -185,6 +194,30 @@ class Rpgcalendar_Installer
             `visible`     TINYINT(1) NOT NULL DEFAULT 1,
             `dateline`    INT UNSIGNED NOT NULL DEFAULT 0,
             PRIMARY KEY (`hid`),
+            KEY `overlap` (`end_key`, `start_key`),
+            KEY `loc` (`locid`)
+        ) ENGINE=InnoDB{$collation};");
+
+        // Moon phases per location (virtual calendar 'moon-{locid}'). Same dated
+        // shape as weather; `phase` holds one of new/waxing/full/waning.
+        $db->query("CREATE TABLE IF NOT EXISTS `" . TABLE_PREFIX . "rpgcalendar_moonphases` (
+            `mid`         INT UNSIGNED NOT NULL AUTO_INCREMENT,
+            `locid`       INT UNSIGNED NOT NULL DEFAULT 0,
+            `source`      VARCHAR(10) NOT NULL DEFAULT 'manual',
+            `phase`       VARCHAR(20) NOT NULL DEFAULT '',
+            `start_year`  SMALLINT NOT NULL DEFAULT 0,
+            `start_month` TINYINT UNSIGNED NOT NULL DEFAULT 1,
+            `start_day`   TINYINT UNSIGNED NOT NULL DEFAULT 1,
+            `end_year`    SMALLINT NOT NULL DEFAULT 0,
+            `end_month`   TINYINT UNSIGNED NOT NULL DEFAULT 1,
+            `end_day`     TINYINT UNSIGNED NOT NULL DEFAULT 1,
+            `start_key`   INT NOT NULL DEFAULT 0,
+            `end_key`     INT NOT NULL DEFAULT 0,
+            `yearly`      TINYINT(1) NOT NULL DEFAULT 0,
+            `note`        VARCHAR(255) NOT NULL DEFAULT '',
+            `visible`     TINYINT(1) NOT NULL DEFAULT 1,
+            `dateline`    INT UNSIGNED NOT NULL DEFAULT 0,
+            PRIMARY KEY (`mid`),
             KEY `overlap` (`end_key`, `start_key`),
             KEY `loc` (`locid`)
         ) ENGINE=InnoDB{$collation};");
@@ -233,6 +266,23 @@ class Rpgcalendar_Installer
             && !$db->field_exists('url', 'rpgcalendar_holidays')) {
             $db->add_column('rpgcalendar_holidays', 'url',
                 "VARCHAR(255) NOT NULL DEFAULT '' AFTER `description`");
+        }
+
+        // v1.3: per-location moon cycle configuration.
+        if ($db->table_exists('rpgcalendar_locations')) {
+            $moon_cols = [
+                'moon_enabled'   => "TINYINT(1) NOT NULL DEFAULT 0 AFTER `lon`",
+                'moon_cycle'     => "DECIMAL(9,5) NOT NULL DEFAULT 29.53059 AFTER `moon_enabled`",
+                'moon_ref_year'  => "SMALLINT NOT NULL DEFAULT 2000 AFTER `moon_cycle`",
+                'moon_ref_month' => "TINYINT UNSIGNED NOT NULL DEFAULT 1 AFTER `moon_ref_year`",
+                'moon_ref_day'   => "TINYINT UNSIGNED NOT NULL DEFAULT 6 AFTER `moon_ref_month`",
+                'moon_ref_phase' => "TINYINT UNSIGNED NOT NULL DEFAULT 0 AFTER `moon_ref_day`",
+            ];
+            foreach ($moon_cols as $col => $def) {
+                if (!$db->field_exists($col, 'rpgcalendar_locations')) {
+                    $db->add_column('rpgcalendar_locations', $col, $def);
+                }
+            }
         }
 
         self::migrateEventsToCalendars();
@@ -340,6 +390,7 @@ class Rpgcalendar_Installer
         $db->drop_table('rpgcalendar_locations');
         $db->drop_table('rpgcalendar_weather');
         $db->drop_table('rpgcalendar_holidays');
+        $db->drop_table('rpgcalendar_moonphases');
     }
 
     /**
@@ -479,6 +530,18 @@ class Rpgcalendar_Installer
                 'Show missing-data hint',
                 'Show a hint for fictional locations that have no weather/holiday data for the displayed month, asking the team to add it manually.',
                 'onoff', '1',
+            ],
+            'moon_imagedir' => [
+                'Moon image directory',
+                'Board-relative URL path to the folder with moon phase images '
+                    . '(e.g. images/rpgcalendar/moon). The plugin looks for a file named '
+                    . 'after the phase with a .png, .gif, .jpg, .jpeg, .svg or .webp extension. '
+                    . 'The phase names are: new (new moon), waxing (waxing half / first quarter), '
+                    . 'full (full moon), waning (waning half / last quarter) &ndash; e.g. full.svg. '
+                    . 'As with the weather icons you may add dash-suffixed variants '
+                    . '(full-1.svg, full-2.svg &hellip;). If no image exists, the localized phase '
+                    . 'text is shown instead. The plugin ships a default icon set in that folder.',
+                'text', 'inc/plugins/rpgcalendar/assets/moon',
             ],
         ];
     }
