@@ -989,16 +989,40 @@ if ($action === 'do_generate' && $mybb->request_method === 'post') {
         admin_redirect('index.php?module=tools-rpgcalendar&action=locations');
     }
 
+    // Each source is opt-in via its own checkbox, so the admin can refresh e.g.
+    // only the moon without touching hand-edited holidays.
+    $want_weather  = ($mybb->get_input('gen_weather', MyBB::INPUT_INT) === 1);
+    $want_holidays = ($mybb->get_input('gen_holidays', MyBB::INPUT_INT) === 1);
+    $want_moon     = ($mybb->get_input('gen_moon', MyBB::INPUT_INT) === 1);
+    if (!$want_weather && !$want_holidays && !$want_moon) {
+        flash_message($lang->rpgcalendar_generate_nothing, 'error');
+        admin_redirect('index.php?module=tools-rpgcalendar&action=locations');
+    }
+
+    // Keep only what actually applies to this location.
+    $parts   = [];
+    if ($is_real && $want_weather) {
+        $parts[] = 'weather';
+    }
+    if ($is_real && $want_holidays) {
+        $parts[] = 'holidays';
+    }
+    $do_moon = ($moon_on && $want_moon);
+    if (!$parts && !$do_moon) {
+        flash_message($lang->rpgcalendar_generate_notapplicable, 'error');
+        admin_redirect('index.php?module=tools-rpgcalendar&action=locations');
+    }
+
     $generator = new Rpgcalendar_Generator($rpgcalendar_db);
     $weather = $holidays = $moon = 0;
-    if ($is_real) {
+    if ($parts) {
         $from_key = Rpgcalendar_Engine::dateKey($from_year, 1, 1);
         $to_key   = Rpgcalendar_Engine::dateKey($to_year, 12, 31);
-        $result   = $generator->generateForLocation($locid, $from_key, $to_key);
+        $result   = $generator->generateForLocation($locid, $from_key, $to_key, $parts);
         $weather  = $result['weather'];
         $holidays = $result['holidays'];
     }
-    if ($moon_on) {
+    if ($do_moon) {
         $moon = $generator->generateMoonForLocation($locid, $from_year, $to_year);
     }
     $errors = $generator->getErrors();
@@ -1482,7 +1506,8 @@ if ($action === 'locations') {
     $table = new Table();
     $table->construct_header($lang->rpgcalendar_th_locname);
     $table->construct_header($lang->rpgcalendar_th_type, ['width' => '12%']);
-    $table->construct_header($lang->rpgcalendar_th_place, ['width' => '25%']);
+    $table->construct_header($lang->rpgcalendar_th_place, ['width' => '22%']);
+    $table->construct_header($lang->rpgcalendar_th_moon, ['width' => '8%', 'class' => 'align_center']);
     $table->construct_header($lang->rpgcalendar_th_visible, ['width' => '8%', 'class' => 'align_center']);
     $table->construct_header($lang->rpgcalendar_th_controls, ['width' => '20%', 'class' => 'align_center']);
 
@@ -1505,6 +1530,7 @@ if ($action === 'locations') {
         $table->construct_cell(htmlspecialchars_uni($loc['name']));
         $table->construct_cell(((int)$loc['type'] === 1) ? $lang->rpgcalendar_loctype_real : $lang->rpgcalendar_loctype_fictional);
         $table->construct_cell($place);
+        $table->construct_cell(((int)$loc['moon_enabled'] === 1) ? $lang->yes : $lang->no, ['class' => 'align_center']);
         $table->construct_cell(((int)$loc['visible'] === 1) ? $lang->yes : $lang->no, ['class' => 'align_center']);
         $table->construct_cell(
             '<a href="index.php?module=tools-rpgcalendar&amp;action=edit_location&amp;locid=' . $locid . '">'
@@ -1514,7 +1540,7 @@ if ($action === 'locations') {
         $table->construct_row();
     }
     if (!$locations) {
-        $table->construct_cell($lang->rpgcalendar_no_locations, ['colspan' => 5, 'class' => 'align_center']);
+        $table->construct_cell($lang->rpgcalendar_no_locations, ['colspan' => 6, 'class' => 'align_center']);
         $table->construct_row();
     }
     $table->output($lang->rpgcalendar_tab_locations);
@@ -1541,6 +1567,16 @@ if ($action === 'locations') {
             . ' ' . $gform->generate_numeric_field('from_year', $cur, ['min' => $min_year, 'max' => $max_year, 'style' => 'width: 90px'])
             . ' &ndash; ' . $gform->generate_numeric_field('to_year', $cur, ['min' => $min_year, 'max' => $max_year, 'style' => 'width: 90px']),
             'gen_locid'
+        );
+        // Pick which sources to (re)generate. Each replaces only its own auto rows,
+        // so you can refresh one without touching hand-edited data of another.
+        $gc->output_row(
+            $lang->rpgcalendar_generate_what,
+            $lang->rpgcalendar_generate_what_desc,
+            $gform->generate_check_box('gen_weather', 1, $lang->rpgcalendar_tab_weather, ['checked' => 1, 'id' => 'gen_weather'])
+            . '<br />' . $gform->generate_check_box('gen_holidays', 1, $lang->rpgcalendar_tab_holidays, ['checked' => 1, 'id' => 'gen_holidays'])
+            . '<br />' . $gform->generate_check_box('gen_moon', 1, $lang->rpgcalendar_tab_moon, ['checked' => 1, 'id' => 'gen_moon']),
+            'gen_weather'
         );
         $gc->end();
         $gform->output_submit_wrapper([$gform->generate_submit_button($lang->rpgcalendar_generate_btn)]);

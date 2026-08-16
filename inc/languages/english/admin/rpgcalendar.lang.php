@@ -185,6 +185,7 @@ $l['rpgcalendar_field_yearly_desc']   = "If yes, this entry repeats on the same 
 $l['rpgcalendar_th_locname'] = "Name";
 $l['rpgcalendar_th_type']    = "Type";
 $l['rpgcalendar_th_place']   = "City / country";
+$l['rpgcalendar_th_moon']    = "Moon";
 $l['rpgcalendar_no_locations'] = "No locations yet.";
 $l['rpgcalendar_confirm_delete_location'] = "Really delete? All weather, holiday and moon data of this location will be removed.";
 
@@ -203,8 +204,12 @@ $l['rpgcalendar_yearly_short'] = "yearly";
 $l['rpgcalendar_generate_title'] = "Generate weather, holidays &amp; moon";
 $l['rpgcalendar_generate_desc']  = "For a real location: fetch real weather and holidays for the chosen year range. For any moon-enabled location: compute the moon phases (works for any year). Stored as editable entries, replacing previously generated ones.";
 $l['rpgcalendar_generate_btn']   = "Generate";
+$l['rpgcalendar_generate_what']      = "Generate what?";
+$l['rpgcalendar_generate_what_desc'] = "Tick which sources to (re)generate. Each one replaces only its own generated entries; unticked sources are left completely untouched (so you can refresh the moon without re-generating hand-edited holidays). Weather &amp; holidays only apply to real locations, the moon only to moon-enabled ones.";
 $l['rpgcalendar_generate_done']  = "Generation finished: {1} weather entries, {2} holidays and {3} moon phases.";
 $l['rpgcalendar_generate_failed'] = "Nothing could be generated. Details: {1}";
+$l['rpgcalendar_generate_nothing'] = "Please tick at least one source to generate.";
+$l['rpgcalendar_generate_notapplicable'] = "None of the ticked sources apply to this location: weather and holidays need a real location, and the moon needs the moon calendar to be enabled on it.";
 
 // Month text pre-fill
 $l['rpgcalendar_monthtext_prefill']      = "Pre-fill from weather / holidays";

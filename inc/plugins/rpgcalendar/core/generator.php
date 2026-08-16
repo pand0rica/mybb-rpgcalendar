@@ -133,14 +133,20 @@ class Rpgcalendar_Generator
     // -------------------------------------------------------------------
 
     /**
-     * (Re)generates weather + holidays for one real location within a key range.
-     * Replaces existing 'auto' rows in that range, leaving 'manual' rows intact.
+     * (Re)generates weather and/or holidays for one real location within a key
+     * range. Replaces existing 'auto' rows in that range, leaving 'manual' rows
+     * intact. Which sources run is controlled by $parts so the admin can refresh
+     * one without touching the other.
      *
+     * @param string[] $parts subset of ['weather','holidays'] to (re)generate
      * @return array ['weather' => int, 'holidays' => int, 'errors' => string[]]
      */
-    public function generateForLocation(int $locid, int $from_key, int $to_key): array
+    public function generateForLocation(int $locid, int $from_key, int $to_key, array $parts = ['weather', 'holidays']): array
     {
         $this->errors = [];
+
+        $do_weather  = in_array('weather', $parts, true);
+        $do_holidays = in_array('holidays', $parts, true);
 
         $location = $this->database->getLocation($locid);
         if (!$location) {
@@ -157,42 +163,44 @@ class Rpgcalendar_Generator
             list($from_key, $to_key) = [$to_key, $from_key];
         }
 
-        // Ensure coordinates (geocode from the city name if missing).
-        $lat = (float)$location['lat'];
-        $lon = (float)$location['lon'];
-        if ($lat === 0.0 && $lon === 0.0) {
-            $geo = $this->geocode((string)$location['city']);
-            if ($geo === null) {
-                $this->errors[] = 'geocode-failed';
-            } else {
-                $lat = $geo['lat'];
-                $lon = $geo['lon'];
-                $this->database->saveLocation(['lat' => $lat, 'lon' => $lon], $locid, true);
-            }
-        }
-
         $weather_count = 0;
-        if ($lat !== 0.0 || $lon !== 0.0) {
-            $days = $this->fetchWeather($lat, $lon, $from_key, $to_key);
-            $this->database->deleteAutoWeatherInRange($locid, $from_key, $to_key);
-            foreach ($days as $d) {
-                $this->database->saveWeather([
-                    'locid'       => $locid,
-                    'source'      => 'auto',
-                    'wcondition'  => $d['slug'],
-                    'start_year'  => $d['y'], 'start_month' => $d['m'], 'start_day' => $d['d'],
-                    'end_year'    => $d['y'], 'end_month'   => $d['m'], 'end_day'   => $d['d'],
-                    'yearly'      => 0,
-                    'note'        => $d['note'],
-                    'visible'     => 1,
-                ]);
-                $weather_count++;
+        if ($do_weather) {
+            // Ensure coordinates (geocode from the city name if missing).
+            $lat = (float)$location['lat'];
+            $lon = (float)$location['lon'];
+            if ($lat === 0.0 && $lon === 0.0) {
+                $geo = $this->geocode((string)$location['city']);
+                if ($geo === null) {
+                    $this->errors[] = 'geocode-failed';
+                } else {
+                    $lat = $geo['lat'];
+                    $lon = $geo['lon'];
+                    $this->database->saveLocation(['lat' => $lat, 'lon' => $lon], $locid, true);
+                }
+            }
+
+            if ($lat !== 0.0 || $lon !== 0.0) {
+                $days = $this->fetchWeather($lat, $lon, $from_key, $to_key);
+                $this->database->deleteAutoWeatherInRange($locid, $from_key, $to_key);
+                foreach ($days as $d) {
+                    $this->database->saveWeather([
+                        'locid'       => $locid,
+                        'source'      => 'auto',
+                        'wcondition'  => $d['slug'],
+                        'start_year'  => $d['y'], 'start_month' => $d['m'], 'start_day' => $d['d'],
+                        'end_year'    => $d['y'], 'end_month'   => $d['m'], 'end_day'   => $d['d'],
+                        'yearly'      => 0,
+                        'note'        => $d['note'],
+                        'visible'     => 1,
+                    ]);
+                    $weather_count++;
+                }
             }
         }
 
         $holiday_count = 0;
         $country = strtoupper(preg_replace('/[^A-Za-z]/', '', (string)$location['country']));
-        if (strlen($country) === 2) {
+        if ($do_holidays && strlen($country) === 2) {
             $year_from = intdiv($from_key, 10000);
             $year_to   = intdiv($to_key, 10000);
             $this->database->deleteAutoHolidayInRange($locid, $from_key, $to_key);
@@ -216,7 +224,7 @@ class Rpgcalendar_Generator
                     $holiday_count++;
                 }
             }
-        } else {
+        } elseif ($do_holidays) {
             $this->errors[] = 'no-country';
         }
 

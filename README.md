@@ -153,10 +153,13 @@ locally, so they exist for **any year** (unlike weather, which is bound to the r
    - **Fictional** locations use the **Cycle length** (days) and a **Reference phase** – pick a
      date on which a *new* or *full* moon occurs; that anchors the whole cycle. This is how you
      build a fantasy moon (e.g. a 28-day or 40-day cycle).
-2. On the location list, use **Generate** with a year range. Any moon-enabled location (real or
-   fictional) gets its four principal phases – **new moon, waxing half moon, full moon, waning
-   half moon** – stored as editable entries. *Generate* again to extend/refresh; it replaces
-   previously generated entries but keeps any you edited or added by hand.
+2. On the location list, use **Generate** with a year range. The form has a **checkbox per
+   source** (weather / holidays / moon) – tick only what you want to (re)generate. Each source
+   replaces only its own generated entries, so you can refresh the moon without re-generating
+   hand-edited holidays. For the moon, any moon-enabled location (real or fictional) gets its
+   four principal phases – **new moon, waxing half moon, full moon, waning half moon** – stored
+   as editable entries. *Generate* again to extend/refresh; it keeps anything you edited or added
+   by hand.
 3. The **Moon** tab lists all phases and lets you add or edit them by hand (editing a generated
    entry converts it to manual so the next *Generate* keeps it), filter by location, and bulk-
    delete all generated entries.

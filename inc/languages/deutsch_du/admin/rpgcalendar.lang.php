@@ -185,6 +185,7 @@ $l['rpgcalendar_field_yearly_desc']   = "Wenn ja, wiederholt sich dieser Eintrag
 $l['rpgcalendar_th_locname'] = "Name";
 $l['rpgcalendar_th_type']    = "Typ";
 $l['rpgcalendar_th_place']   = "Stadt / Land";
+$l['rpgcalendar_th_moon']    = "Mond";
 $l['rpgcalendar_no_locations'] = "Noch keine Orte vorhanden.";
 $l['rpgcalendar_confirm_delete_location'] = "Wirklich löschen? Alle Wetter-, Feiertags- und Monddaten dieses Orts werden entfernt.";
 
@@ -203,8 +204,12 @@ $l['rpgcalendar_yearly_short'] = "jährlich";
 $l['rpgcalendar_generate_title'] = "Wetter, Feiertage &amp; Mond generieren";
 $l['rpgcalendar_generate_desc']  = "Für einen realen Ort: echtes Wetter und Feiertage für den gewählten Jahresbereich abrufen. Für jeden Ort mit aktiviertem Mondkalender: die Mondphasen berechnen (für beliebige Jahre). Wird als editierbare Einträge gespeichert (ersetzt zuvor generierte).";
 $l['rpgcalendar_generate_btn']   = "Generieren";
+$l['rpgcalendar_generate_what']      = "Was generieren?";
+$l['rpgcalendar_generate_what_desc'] = "Häkchen setzen, was (neu) generiert werden soll. Jede Quelle ersetzt nur ihre eigenen generierten Einträge; nicht angehakte Quellen bleiben völlig unangetastet (so kannst du den Mond neu erzeugen, ohne handbearbeitete Feiertage zu überschreiben). Wetter &amp; Feiertage gelten nur für reale Orte, der Mond nur für Orte mit aktiviertem Mondkalender.";
 $l['rpgcalendar_generate_done']  = "Generierung abgeschlossen: {1} Wetter-Einträge, {2} Feiertage und {3} Mondphasen.";
 $l['rpgcalendar_generate_failed'] = "Es konnte nichts generiert werden. Details: {1}";
+$l['rpgcalendar_generate_nothing'] = "Bitte mindestens eine Quelle zum Generieren anhaken.";
+$l['rpgcalendar_generate_notapplicable'] = "Keine der angehakten Quellen passt zu diesem Ort: Wetter und Feiertage brauchen einen realen Ort, der Mond braucht einen aktivierten Mondkalender.";
 
 // Monatstext-Vorbelegung
 $l['rpgcalendar_monthtext_prefill']      = "Aus Wetter / Feiertagen vorbelegen";

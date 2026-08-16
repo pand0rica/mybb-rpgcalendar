@@ -24,6 +24,10 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 - New ACP tab **Moon** (list + manual add/edit, per-location filter, bulk *Delete all generated*),
   new moon-configuration fields on the location form, and the *Generate* action now also produces
   moon phases for any moon-enabled location (real or fictional).
+- The *Generate* form now has a **checkbox per source** (weather / holidays / moon): you pick which
+  to (re)generate, and each replaces only its own generated entries, so refreshing one never
+  touches hand-edited data of another. The location list gained a **Moon** column showing whether
+  the moon calendar is enabled.
 - New table `rpgcalendar_moonphases`; new columns on `rpgcalendar_locations`
   (`moon_enabled`, `moon_cycle`, `moon_ref_year/month/day`, `moon_ref_phase`); new setting for the
   moon image directory. Schema is added idempotently on (re)activation.
