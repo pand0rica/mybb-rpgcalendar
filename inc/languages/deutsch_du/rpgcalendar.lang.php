@@ -13,7 +13,6 @@ $l['rpgcalendar_col_type']  = "Typ";
 $l['rpgcalendar_col_event'] = "Ereignis";
 
 $l['rpgcalendar_birthday'] = "Geburtstag";
-$l['rpgcalendar_more']     = "+{1} weitere";
 
 $l['rpgcalendar_event_back']          = "Zurück zum Kalender";
 $l['rpgcalendar_event_by']            = "Eingetragen von {1}";

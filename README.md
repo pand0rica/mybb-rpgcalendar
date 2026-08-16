@@ -294,6 +294,7 @@ Path: **ACP → Configuration → Settings → RPG Calendar**
 | Default year / month | Start view when opened without parameters; 0 = real today |
 | Weather image directory | Board-relative folder with weather images named after the WMO weather code (`0.svg` … `99.svg`, plus `windy.svg`). Ships with a default icon set |
 | Windy threshold (km/h) | When generating, a day with max wind speed ≥ this value is marked `windy` instead of its weather code (0 = off) |
+| Moon image directory | Board-relative folder with moon-phase images named after the phase (`new`, `waxing`, `full`, `waning`), dash-suffixed variants supported. Ships with a default icon set |
 | Holiday symbol | One symbol for all holidays: an emoji/short text or an image URL. Ships with a default calendar-star icon that matches the weather set |
 | Enrich generated holidays with Wikipedia | Translate generated holiday names and add a short description + article link from Wikipedia. Off = plain name and day-off note only |
 | Show missing-data hint | Show the "please add data" hint for fictional locations without data |

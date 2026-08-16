@@ -32,6 +32,13 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
   (`moon_enabled`, `moon_cycle`, `moon_ref_year/month/day`, `moon_ref_phase`); new setting for the
   moon image directory. Schema is added idempotently on (re)activation.
 
+### Changed
+- **Day cells now show all chips instead of capping at four.** Previously a crowded day rendered
+  only the first four chips followed by a "+N more" line, which hid weather/moon/holiday chips
+  behind that counter on busy days. The cap is gone: every chip is shown and the cell simply grows
+  taller. The now-unused `rpgcalendar_daycell_more` template and `rpgcalendar_more` language string
+  were removed.
+
 ## [1.2.0] - 2026-08-14
 
 ### New
