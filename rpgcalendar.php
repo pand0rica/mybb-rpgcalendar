@@ -1652,7 +1652,9 @@ foreach ($month_data['grid'] as $week) {
                 $mlabel = rpgcalendar_moon_label((string)$event['condition']);
                 $mnote  = (string)($event['note'] ?? '');
                 $event_symbol = rpgcalendar_moon_symbol((string)$event['condition'], $mlabel, (int)($event['mid'] ?? 0));
-                $visible_text = ($mnote !== '') ? $mnote : (($event_symbol === '') ? $mlabel : '');
+                // Always show the phase name (e.g. "Vollmond") next to the icon,
+                // appending the optional note.
+                $visible_text = $mlabel . ($mnote !== '' ? ' – ' . $mnote : '');
                 $event_title  = htmlspecialchars_uni($visible_text);
                 $tip = $mlabel . ($mnote !== '' ? ', ' . $mnote : '');
                 if (($event['locname'] ?? '') !== '') {
