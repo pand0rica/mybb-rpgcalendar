@@ -240,9 +240,12 @@ $l['rpgcalendar_error_moon_cycle']      = "The moon cycle length must be between
 $l['rpgcalendar_error_moon_ref']        = "The moon reference date is invalid or outside the allowed year range.";
 
 // Bulk delete of generated entries
-$l['rpgcalendar_delete_auto']         = "Delete all generated";
-$l['rpgcalendar_confirm_delete_auto'] = "Delete all generated (auto) entries? Manually added or edited entries are kept.";
-$l['rpgcalendar_delete_auto_done']    = "All generated entries have been deleted.";
+$l['rpgcalendar_delete_auto']            = "Delete generated";
+$l['rpgcalendar_confirm_delete_auto']    = "Delete the generated (auto) entries in the selected location and range? Manually added or edited entries are kept.";
+$l['rpgcalendar_delete_auto_done']       = "The generated entries have been deleted.";
+$l['rpgcalendar_delete_auto_from']       = "from year";
+$l['rpgcalendar_delete_auto_to']         = "to year";
+$l['rpgcalendar_delete_auto_range_desc'] = "Leave both year fields empty to delete all generated entries for the chosen location. Only generated (auto) entries are affected.";
 
 // Weather condition labels per WMO code + windy (v1.2)
 $l['rpgcalendar_wcond_0'] = "Clear sky";

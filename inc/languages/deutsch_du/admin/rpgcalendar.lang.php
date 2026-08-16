@@ -240,9 +240,12 @@ $l['rpgcalendar_error_moon_cycle']      = "Die Mondzyklus-Länge muss zwischen 1
 $l['rpgcalendar_error_moon_ref']        = "Das Mond-Bezugsdatum ist ungültig oder außerhalb des erlaubten Jahresbereichs.";
 
 // Massen-Löschen generierter Einträge
-$l['rpgcalendar_delete_auto']         = "Alle generierten löschen";
-$l['rpgcalendar_confirm_delete_auto'] = "Alle generierten (auto) Einträge löschen? Manuell angelegte oder bearbeitete Einträge bleiben erhalten.";
-$l['rpgcalendar_delete_auto_done']    = "Alle generierten Einträge wurden gelöscht.";
+$l['rpgcalendar_delete_auto']            = "Generierte löschen";
+$l['rpgcalendar_confirm_delete_auto']    = "Die generierten (auto) Einträge im gewählten Ort und Zeitraum löschen? Manuell angelegte oder bearbeitete Einträge bleiben erhalten.";
+$l['rpgcalendar_delete_auto_done']       = "Die generierten Einträge wurden gelöscht.";
+$l['rpgcalendar_delete_auto_from']       = "von Jahr";
+$l['rpgcalendar_delete_auto_to']         = "bis Jahr";
+$l['rpgcalendar_delete_auto_range_desc'] = "Beide Jahresfelder leer lassen, um alle generierten Einträge des gewählten Orts zu löschen. Es sind nur generierte (auto) Einträge betroffen.";
 
 // Wetter-Bezeichnungen je WMO-Code + windig (v1.2)
 $l['rpgcalendar_wcond_0'] = "Klarer Himmel";

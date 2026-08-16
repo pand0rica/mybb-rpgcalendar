@@ -584,6 +584,80 @@ function rpgcalendar_acp_dated_rows(FormContainer $fc, Form $form, array $values
     );
 }
 
+/**
+ * Renders the "delete generated entries" panel for weather/holidays/moon.
+ * Lets the admin scope the deletion by location and by an optional year range
+ * (both bounds optional; empty = unbounded). Shared by all three list views.
+ */
+function rpgcalendar_acp_delete_auto_panel(array $names, int $filter_loc, string $delete_action): void
+{
+    global $mybb, $lang;
+
+    $loc_select = '<select name="filter_loc"><option value="0">' . $lang->rpgcalendar_filter_all_locations . '</option>';
+    foreach ($names as $lid => $lname) {
+        $sel = ((int)$lid === $filter_loc) ? ' selected="selected"' : '';
+        $loc_select .= '<option value="' . (int)$lid . '"' . $sel . '>' . htmlspecialchars_uni($lname) . '</option>';
+    }
+    $loc_select .= '</select>';
+
+    echo '<form action="index.php" method="post" style="margin: 0 0 12px; padding: 8px 10px; border: 1px solid #ccc; border-radius: 4px;">'
+        . '<input type="hidden" name="module" value="tools-rpgcalendar" />'
+        . '<input type="hidden" name="action" value="' . $delete_action . '" />'
+        . '<input type="hidden" name="my_post_key" value="' . $mybb->post_code . '" />'
+        . '<strong>' . $lang->rpgcalendar_delete_auto . ':</strong> '
+        . $loc_select
+        . ' <span class="smalltext">' . $lang->rpgcalendar_delete_auto_from . '</span> '
+        . '<input type="text" name="from_year" value="" style="width:70px" /> '
+        . '<span class="smalltext">' . $lang->rpgcalendar_delete_auto_to . '</span> '
+        . '<input type="text" name="to_year" value="" style="width:70px" /> '
+        . '<input type="submit" class="submit_button" value="' . $lang->rpgcalendar_delete_auto
+        . '" onclick="return confirm(\'' . $lang->rpgcalendar_confirm_delete_auto . '\');" /> '
+        . '<div class="smalltext" style="margin-top: 5px;">' . $lang->rpgcalendar_delete_auto_range_desc . '</div>'
+        . '</form>';
+}
+
+/**
+ * Handles a scoped "delete generated" POST for one source type. Reads the
+ * location and optional year range, then deletes the matching auto rows.
+ * $type: 'weather' | 'holidays' | 'moon'. Exits via admin_redirect.
+ */
+function rpgcalendar_acp_do_delete_auto(Rpgcalendar_Database $db, string $type): void
+{
+    global $mybb, $lang;
+
+    $map = [
+        'weather'  => ['all' => 'deleteAutoWeather', 'range' => 'deleteAutoWeatherInRange'],
+        'holidays' => ['all' => 'deleteAutoHoliday', 'range' => 'deleteAutoHolidayInRange'],
+        'moon'     => ['all' => 'deleteAutoMoon',    'range' => 'deleteAutoMoonInRange'],
+    ];
+    $m        = $map[$type];
+    $redirect = 'index.php?module=tools-rpgcalendar&action=' . $type;
+
+    $loc      = $mybb->get_input('filter_loc', MyBB::INPUT_INT);
+    // Read the year bounds as raw strings: year 0 is valid (astronomical
+    // numbering) and years may be negative, so '' is the only "unbounded" flag.
+    $from_raw = trim($mybb->get_input('from_year'));
+    $to_raw   = trim($mybb->get_input('to_year'));
+
+    if ($from_raw === '' && $to_raw === '') {
+        $db->{$m['all']}($loc);
+    } else {
+        list($min_year, $max_year) = rpgcalendar_acp_year_bounds();
+        $from_year = ($from_raw !== '') ? (int)$from_raw : $min_year;
+        $to_year   = ($to_raw   !== '') ? (int)$to_raw   : $max_year;
+        if ($from_year > $to_year) {
+            flash_message($lang->rpgcalendar_error_year_range, 'error');
+            admin_redirect($redirect . '&filter_loc=' . $loc);
+        }
+        $from_key = Rpgcalendar_Engine::dateKey($from_year, 1, 1);
+        $to_key   = Rpgcalendar_Engine::dateKey($to_year, 12, 31);
+        $db->{$m['range']}($loc, $from_key, $to_key);
+    }
+
+    flash_message($lang->rpgcalendar_delete_auto_done, 'success');
+    admin_redirect($redirect . '&filter_loc=' . $loc);
+}
+
 /** Renders the location add/edit form. */
 function rpgcalendar_acp_location_form(array $values, array $errors, string $form_action, string $tab): void
 {
@@ -1087,10 +1161,7 @@ if ($action === 'delete_weather' && $mybb->request_method === 'post') {
 }
 
 if ($action === 'delete_auto_weather' && $mybb->request_method === 'post') {
-    $loc = $mybb->get_input('filter_loc', MyBB::INPUT_INT);
-    $rpgcalendar_db->deleteAutoWeather($loc);
-    flash_message($lang->rpgcalendar_delete_auto_done, 'success');
-    admin_redirect('index.php?module=tools-rpgcalendar&action=weather&filter_loc=' . $loc);
+    rpgcalendar_acp_do_delete_auto($rpgcalendar_db, 'weather');
 }
 
 // --- Holidays ---
@@ -1148,10 +1219,7 @@ if ($action === 'delete_holiday' && $mybb->request_method === 'post') {
 }
 
 if ($action === 'delete_auto_holiday' && $mybb->request_method === 'post') {
-    $loc = $mybb->get_input('filter_loc', MyBB::INPUT_INT);
-    $rpgcalendar_db->deleteAutoHoliday($loc);
-    flash_message($lang->rpgcalendar_delete_auto_done, 'success');
-    admin_redirect('index.php?module=tools-rpgcalendar&action=holidays&filter_loc=' . $loc);
+    rpgcalendar_acp_do_delete_auto($rpgcalendar_db, 'holidays');
 }
 
 // --- Moon phases ---
@@ -1206,10 +1274,7 @@ if ($action === 'delete_moon' && $mybb->request_method === 'post') {
 }
 
 if ($action === 'delete_auto_moon' && $mybb->request_method === 'post') {
-    $loc = $mybb->get_input('filter_loc', MyBB::INPUT_INT);
-    $rpgcalendar_db->deleteAutoMoon($loc);
-    flash_message($lang->rpgcalendar_delete_auto_done, 'success');
-    admin_redirect('index.php?module=tools-rpgcalendar&action=moon&filter_loc=' . $loc);
+    rpgcalendar_acp_do_delete_auto($rpgcalendar_db, 'moon');
 }
 
 /** Builds a suggested month text from a location's weather + holidays. */
@@ -1614,21 +1679,14 @@ if ($action === 'weather') {
     echo '<p><a href="index.php?module=tools-rpgcalendar&amp;action=add_weather">&#43; '
         . $lang->rpgcalendar_tab_add_weather . '</a></p>';
 
-    $flt = $mybb->get_input('filter_loc', MyBB::INPUT_INT);
-    echo '<form action="index.php" method="post" style="margin: 0 0 10px;">'
-        . '<input type="hidden" name="module" value="tools-rpgcalendar" />'
-        . '<input type="hidden" name="action" value="delete_auto_weather" />'
-        . '<input type="hidden" name="filter_loc" value="' . $flt . '" />'
-        . '<input type="hidden" name="my_post_key" value="' . $mybb->post_code . '" />'
-        . '<input type="submit" class="submit_button" value="' . $lang->rpgcalendar_delete_auto
-        . '" onclick="return confirm(\'' . $lang->rpgcalendar_confirm_delete_auto . '\');" /></form>';
-
     $names = [];
     foreach ($rpgcalendar_db->listLocations() as $loc) {
         $names[(int)$loc['locid']] = $loc['name'];
     }
 
     $filter_loc = $mybb->get_input('filter_loc', MyBB::INPUT_INT);
+    rpgcalendar_acp_delete_auto_panel($names, $filter_loc, 'delete_auto_weather');
+
     if ($names) {
         echo '<form action="index.php" method="get" style="margin-bottom: 8px;">'
             . '<input type="hidden" name="module" value="tools-rpgcalendar" />'
@@ -1721,21 +1779,14 @@ if ($action === 'holidays') {
     echo '<p><a href="index.php?module=tools-rpgcalendar&amp;action=add_holiday">&#43; '
         . $lang->rpgcalendar_tab_add_holiday . '</a></p>';
 
-    $flt = $mybb->get_input('filter_loc', MyBB::INPUT_INT);
-    echo '<form action="index.php" method="post" style="margin: 0 0 10px;">'
-        . '<input type="hidden" name="module" value="tools-rpgcalendar" />'
-        . '<input type="hidden" name="action" value="delete_auto_holiday" />'
-        . '<input type="hidden" name="filter_loc" value="' . $flt . '" />'
-        . '<input type="hidden" name="my_post_key" value="' . $mybb->post_code . '" />'
-        . '<input type="submit" class="submit_button" value="' . $lang->rpgcalendar_delete_auto
-        . '" onclick="return confirm(\'' . $lang->rpgcalendar_confirm_delete_auto . '\');" /></form>';
-
     $names = [];
     foreach ($rpgcalendar_db->listLocations() as $loc) {
         $names[(int)$loc['locid']] = $loc['name'];
     }
 
     $filter_loc = $mybb->get_input('filter_loc', MyBB::INPUT_INT);
+    rpgcalendar_acp_delete_auto_panel($names, $filter_loc, 'delete_auto_holiday');
+
     if ($names) {
         echo '<form action="index.php" method="get" style="margin-bottom: 8px;">'
             . '<input type="hidden" name="module" value="tools-rpgcalendar" />'
@@ -1828,21 +1879,14 @@ if ($action === 'moon') {
     echo '<p><a href="index.php?module=tools-rpgcalendar&amp;action=add_moon">&#43; '
         . $lang->rpgcalendar_tab_add_moon . '</a></p>';
 
-    $flt = $mybb->get_input('filter_loc', MyBB::INPUT_INT);
-    echo '<form action="index.php" method="post" style="margin: 0 0 10px;">'
-        . '<input type="hidden" name="module" value="tools-rpgcalendar" />'
-        . '<input type="hidden" name="action" value="delete_auto_moon" />'
-        . '<input type="hidden" name="filter_loc" value="' . $flt . '" />'
-        . '<input type="hidden" name="my_post_key" value="' . $mybb->post_code . '" />'
-        . '<input type="submit" class="submit_button" value="' . $lang->rpgcalendar_delete_auto
-        . '" onclick="return confirm(\'' . $lang->rpgcalendar_confirm_delete_auto . '\');" /></form>';
-
     $names = [];
     foreach ($rpgcalendar_db->listLocations() as $loc) {
         $names[(int)$loc['locid']] = $loc['name'];
     }
 
     $filter_loc = $mybb->get_input('filter_loc', MyBB::INPUT_INT);
+    rpgcalendar_acp_delete_auto_panel($names, $filter_loc, 'delete_auto_moon');
+
     if ($names) {
         echo '<form action="index.php" method="get" style="margin-bottom: 8px;">'
             . '<input type="hidden" name="module" value="tools-rpgcalendar" />'

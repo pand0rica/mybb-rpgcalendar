@@ -931,11 +931,15 @@ class Rpgcalendar_Database
         $this->db->delete_query('rpgcalendar_weather', 'wid = ' . (int)$wid);
     }
 
+    /** Deletes generated weather rows in a key range; $locid=0 = all locations. */
     public function deleteAutoWeatherInRange(int $locid, int $from_key, int $to_key): void
     {
-        $this->db->delete_query('rpgcalendar_weather',
-            "source = 'auto' AND locid = " . (int)$locid
-            . ' AND start_key >= ' . (int)$from_key . ' AND start_key <= ' . (int)$to_key);
+        $where = "source = 'auto'";
+        if ($locid > 0) {
+            $where .= ' AND locid = ' . (int)$locid;
+        }
+        $where .= ' AND start_key >= ' . (int)$from_key . ' AND start_key <= ' . (int)$to_key;
+        $this->db->delete_query('rpgcalendar_weather', $where);
     }
 
     /** Deletes all generated (auto) weather rows, optionally for one location. */
@@ -1059,11 +1063,15 @@ class Rpgcalendar_Database
         $this->db->delete_query('rpgcalendar_holidays', 'hid = ' . (int)$hid);
     }
 
+    /** Deletes generated holiday rows in a key range; $locid=0 = all locations. */
     public function deleteAutoHolidayInRange(int $locid, int $from_key, int $to_key): void
     {
-        $this->db->delete_query('rpgcalendar_holidays',
-            "source = 'auto' AND locid = " . (int)$locid
-            . ' AND start_key >= ' . (int)$from_key . ' AND start_key <= ' . (int)$to_key);
+        $where = "source = 'auto'";
+        if ($locid > 0) {
+            $where .= ' AND locid = ' . (int)$locid;
+        }
+        $where .= ' AND start_key >= ' . (int)$from_key . ' AND start_key <= ' . (int)$to_key;
+        $this->db->delete_query('rpgcalendar_holidays', $where);
     }
 
     /** Deletes all generated (auto) holiday rows, optionally for one location. */
@@ -1186,11 +1194,15 @@ class Rpgcalendar_Database
         $this->db->delete_query('rpgcalendar_moonphases', 'mid = ' . (int)$mid);
     }
 
+    /** Deletes generated moon rows in a key range; $locid=0 = all locations. */
     public function deleteAutoMoonInRange(int $locid, int $from_key, int $to_key): void
     {
-        $this->db->delete_query('rpgcalendar_moonphases',
-            "source = 'auto' AND locid = " . (int)$locid
-            . ' AND start_key >= ' . (int)$from_key . ' AND start_key <= ' . (int)$to_key);
+        $where = "source = 'auto'";
+        if ($locid > 0) {
+            $where .= ' AND locid = ' . (int)$locid;
+        }
+        $where .= ' AND start_key >= ' . (int)$from_key . ' AND start_key <= ' . (int)$to_key;
+        $this->db->delete_query('rpgcalendar_moonphases', $where);
     }
 
     /** Deletes all generated (auto) moon rows, optionally for one location. */
