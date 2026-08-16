@@ -17,4 +17,7 @@ board-relative folder. As with the weather icons you can add dash-suffixed
 variants (`full-1.svg`, `full-2.svg`, …); one is picked deterministically per
 entry. If no image matches, the localized phase text is shown instead.
 
-These simple SVGs are original artwork shipped with the plugin (GPLv3).
+These SVGs are original artwork shipped with the plugin (GPLv3). They are drawn
+in the same flat, gradient-filled 512×512 style as the weather and holiday icons
+(cool silver for the lit face, deep slate for the shadow side) so all calendar
+symbols share one visual language.

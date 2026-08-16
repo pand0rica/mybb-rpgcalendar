@@ -1,6 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="Waning half moon">
-  <circle cx="32" cy="32" r="26" fill="#3a3f4b" stroke="#6b7280" stroke-width="1.5"/>
-  <path d="M32 6 A26 26 0 0 0 32 58 Z" fill="#f3f4e7"/>
-  <circle cx="24" cy="38" r="4.5" fill="#e4e5d2"/>
-  <circle cx="22" cy="24" r="2" fill="#e4e5d2"/>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Waning half moon"><defs><radialGradient id="lit" cx="182" cy="205" r="235" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#f8fafc"/><stop offset=".55" stop-color="#e9eef5"/><stop offset="1" stop-color="#c7d2e0"/></radialGradient><radialGradient id="dark" cx="300" cy="200" r="245" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#4a5a70"/><stop offset=".6" stop-color="#334155"/><stop offset="1" stop-color="#1b2534"/></radialGradient></defs><circle cx="256" cy="256" r="150" fill="url(#dark)"/><path fill="url(#lit)" d="M256 106a150 150 0 0 0 0 300Z"/><g fill="#cdd7e3"><circle cx="200" cy="216" r="16"/><circle cx="190" cy="300" r="20"/><circle cx="226" cy="266" r="11"/></g><circle cx="256" cy="256" r="150" fill="none" stroke="#94a3b8" stroke-miterlimit="10" stroke-width="7"/></svg>
