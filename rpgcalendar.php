@@ -134,12 +134,21 @@ function rpgcalendar_holiday_symbol(): string
     if ($sym === '') {
         $cache = '';
     } elseif (strpos($sym, '/') !== false || preg_match('/\.(png|gif|jpe?g|svg|webp)$/i', $sym)) {
+        // Resolve a board-relative path to an absolute board URL, exactly like the
+        // weather images (bburl + path). A bare relative src="inc/plugins/..." is what
+        // some image filters key on to strip the image; the weather <img> is never hit
+        // because it always carries a full http(s) URL. Absolute URLs / protocol-relative
+        // values the admin entered are kept as-is.
+        $src = $sym;
+        if (!preg_match('#^(https?:)?//#i', $src)) {
+            $src = rtrim((string)($mybb->settings['bburl'] ?? ''), '/') . '/' . ltrim($src, '/');
+        }
         // Give the image a non-empty alt/title, mirroring the weather <img> markup
         // exactly – an empty alt="" makes some image filters treat it as a bare/unnamed
         // image and strip it.
         $label = (isset($lang->rpgcalendar_cal_holiday) && (string)$lang->rpgcalendar_cal_holiday !== '')
             ? htmlspecialchars_uni((string)$lang->rpgcalendar_cal_holiday) : 'Holiday';
-        $cache = '<img src="' . htmlspecialchars_uni($sym) . '" alt="' . $label . '" title="' . $label . '" class="rpgcalendar_wicon" /> ';
+        $cache = '<img src="' . htmlspecialchars_uni($src) . '" alt="' . $label . '" title="' . $label . '" class="rpgcalendar_wicon" /> ';
     } else {
         $cache = htmlspecialchars_uni($sym) . ' ';
     }
