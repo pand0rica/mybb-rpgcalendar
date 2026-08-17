@@ -22,7 +22,6 @@ $l['rpgcalendar_event_notfound']      = "Dieser Termin existiert nicht oder du d
 $l['rpgcalendar_source_extended'] = "Ereignis";
 $l['rpgcalendar_source_native']   = "Forentermin";
 $l['rpgcalendar_source_plot']     = "Plot";
-$l['rpgcalendar_source_ics']      = "Extern";
 $l['rpgcalendar_source_weather']  = "Wetter";
 $l['rpgcalendar_source_holiday']  = "Feiertag";
 $l['rpgcalendar_source_moon']     = "Mond";

@@ -772,7 +772,7 @@ class Rpgcalendar_Engine
                 'start'        => $occ_start,
                 'end'          => $occ_end,
                 'important'    => ((int)$row['important'] === 1),
-                'badge'        => ((string)$row['source'] === 'ics') ? 'ics' : 'extended',
+                'badge'        => 'extended',
                 'calendar_key' => $calendar_key,
                 'color'        => $calendar_color,
             ];

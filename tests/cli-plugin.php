@@ -48,7 +48,7 @@ function rpgcalendar_cli_status(): void
 {
     global $db, $cache;
 
-    $tables = ['rpgcalendar_events', 'rpgcalendar_monthtexts', 'rpgcalendar_feeds'];
+    $tables = ['rpgcalendar_events', 'rpgcalendar_monthtexts'];
     foreach ($tables as $table) {
         echo "table {$table}: " . ($db->table_exists($table) ? 'exists' : 'MISSING') . "\n";
     }

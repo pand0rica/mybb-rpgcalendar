@@ -122,7 +122,6 @@ class Rpgcalendar_Database
             return $eid;
         }
 
-        $row['source']   = isset($data['source']) ? $this->db->escape_string((string)$data['source']) : 'manual';
         $row['uid']      = (int)($data['uid'] ?? 0);
         $row['dateline'] = TIME_NOW;
 

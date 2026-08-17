@@ -35,9 +35,8 @@ Class/core split (like Blacklist):
 
 ## Tables
 
-- `rpgcalendar_events` – extended events; `source` column prepared for 'ics' (v1.1)
+- `rpgcalendar_events` – extended events
 - `rpgcalendar_monthtexts` – UNIQUE(year, month)
-- `rpgcalendar_feeds` – created in v1.0, used from v1.1 (ICS import)
 
 ## Integration for Plot-CP (provider hook)
 
@@ -100,8 +99,6 @@ There is also an optional output hook `rpgcalendar_monthview_end`
 - Never write to `mybb_events` / `mybb_calendars` – native data is read-only here.
 - Never patch `calendar.php` or any core file (the predecessor plugin did; that's why it died).
 - `start_key`/`end_key` are computed in PHP (`Rpgcalendar_Database`), not by the DB.
-- Keep `rpgcalendar_feeds` + `source`/`source_uid`/`feed_id`/`private` columns even though
-  v1.0 doesn't use them – v1.1 (ICS import) depends on them.
 
 ## Testing
 

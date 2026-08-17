@@ -39,6 +39,23 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
   taller. The now-unused `rpgcalendar_daycell_more` template and `rpgcalendar_more` language string
   were removed.
 
+### Fixed
+- **Recolouring or hiding weather / holiday / moon calendars failed with "invalid calendar".**
+  The *My calendars* save handler validated the submitted key against a stale whitelist
+  (`cal-*`, `plotcat-*`, `feed-*`, `birthdays`) that never got the v1.2/v1.3 location keys, so
+  saving a colour or visibility for a `weather-*`, `holiday-*` or `moon-*` calendar – and for any
+  provider calendar other than `plotcat-*` – was rejected. The handler now validates the general
+  key format (`[a-z0-9_-]{1,60}`, matching the `calendar_key` column and the engine's own key
+  sanitiser), so per-user colour/visibility works for every source, including provider calendars
+  that cannot be enumerated in advance.
+
+### Removed
+- **Dropped the never-implemented ICS-import groundwork.** The planned read-only ICS feed import
+  is no longer on the roadmap, so its leftover schema was removed: the `rpgcalendar_feeds` table
+  and the ICS-only event columns `source`, `source_uid` and `feed_id` (plus the `feed_uid` index).
+  Existing installs are cleaned up idempotently on (re)activation. The dead `ics` event badge
+  (CSS + `rpgcalendar_source_ics` language string) was removed as well.
+
 ## [1.2.0] - 2026-08-14
 
 ### New

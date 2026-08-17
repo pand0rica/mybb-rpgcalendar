@@ -837,10 +837,13 @@ if ($rpgcalendar_action === 'do_calendar_row') {
     verify_post_check($mybb->get_input('my_post_key'));
 
     $viewer_uid = (int)$mybb->user['uid'];
-    // calkey is the calendar key: real 'cal-{cid}' or a virtual one
-    // ('plotcat-{cid}', 'birthdays', 'feed-{fid}').
+    // calkey is a calendar key: real 'cal-{cid}' or a virtual one
+    // ('weather-{locid}', 'holiday-{locid}', 'moon-{locid}', 'plotcat-{cid}',
+    // 'birthdays', or any provider key). Validate the general key format instead
+    // of an enumerated whitelist so per-user colour/visibility works for every
+    // source (including provider calendars that cannot be enumerated here).
     $calkey = trim($mybb->get_input('calkey'));
-    if (!preg_match('/^(cal-\d+|plotcat-\d+|feed-\d+|birthdays)$/', $calkey)) {
+    if ($calkey === '' || !preg_match('/^[a-z0-9_-]{1,60}$/', $calkey)) {
         error($lang->rpgcalendar_error_invalid_calendar);
     }
 

@@ -13,8 +13,7 @@ if (!defined('IN_MYBB')) {
 class Rpgcalendar_Installer
 {
     /**
-     * Creates all plugin tables. rpgcalendar_feeds is unused until v1.1 but is
-     * created here so _install() stays the single source of the schema.
+     * Creates all plugin tables.
      */
     public static function createTables(): void
     {
@@ -39,16 +38,12 @@ class Rpgcalendar_Installer
             `repeat_until_key` INT NOT NULL DEFAULT 0,
             `important`        TINYINT(1) NOT NULL DEFAULT 0,
             `visible`          TINYINT(1) NOT NULL DEFAULT 1,
-            `source`           VARCHAR(20) NOT NULL DEFAULT 'manual',
-            `source_uid`       VARCHAR(191) NOT NULL DEFAULT '',
-            `feed_id`          INT UNSIGNED NOT NULL DEFAULT 0,
             `uid`              INT UNSIGNED NOT NULL DEFAULT 0,
             `private`          TINYINT(1) NOT NULL DEFAULT 0,
             `calendar_id`      INT UNSIGNED NOT NULL DEFAULT 0,
             `dateline`         INT UNSIGNED NOT NULL DEFAULT 0,
             PRIMARY KEY (`eid`),
-            KEY `overlap` (`end_key`, `start_key`),
-            KEY `feed_uid` (`feed_id`, `source_uid`)
+            KEY `overlap` (`end_key`, `start_key`)
         ) ENGINE=InnoDB{$collation};");
 
         // Sub-calendars (Google-Calendar style). type: 0=personal, 1=global/forum.
@@ -81,8 +76,9 @@ class Rpgcalendar_Installer
             KEY `uid` (`uid`)
         ) ENGINE=InnoDB{$collation};");
 
-        // Per-user colour + visibility for any calendar key (real 'cal-{cid}' or,
-        // later, virtual keys like 'plotcat-{cid}', 'birthdays', 'feed-{fid}').
+        // Per-user colour + visibility for any calendar key (real 'cal-{cid}' or
+        // virtual keys like 'weather-{locid}', 'holiday-{locid}', 'moon-{locid}',
+        // 'plotcat-{cid}', 'birthdays').
         $db->query("CREATE TABLE IF NOT EXISTS `" . TABLE_PREFIX . "rpgcalendar_calendar_prefs` (
             `id`           INT UNSIGNED NOT NULL AUTO_INCREMENT,
             `uid`          INT UNSIGNED NOT NULL DEFAULT 0,
@@ -112,18 +108,6 @@ class Rpgcalendar_Installer
             `dateline`  INT UNSIGNED NOT NULL DEFAULT 0,
             PRIMARY KEY (`invite_id`),
             UNIQUE KEY `event_user` (`eid`, `uid`),
-            KEY `uid` (`uid`)
-        ) ENGINE=InnoDB{$collation};");
-
-        $db->query("CREATE TABLE IF NOT EXISTS `" . TABLE_PREFIX . "rpgcalendar_feeds` (
-            `fid`        INT UNSIGNED NOT NULL AUTO_INCREMENT,
-            `title`      VARCHAR(120) NOT NULL DEFAULT '',
-            `url`        VARCHAR(500) NOT NULL DEFAULT '',
-            `uid`        INT UNSIGNED NOT NULL DEFAULT 0,
-            `enabled`    TINYINT(1) NOT NULL DEFAULT 1,
-            `lastfetch`  INT UNSIGNED NOT NULL DEFAULT 0,
-            `laststatus` VARCHAR(255) NOT NULL DEFAULT '',
-            PRIMARY KEY (`fid`),
             KEY `uid` (`uid`)
         ) ENGINE=InnoDB{$collation};");
 
@@ -282,6 +266,18 @@ class Rpgcalendar_Installer
                 if (!$db->field_exists($col, 'rpgcalendar_locations')) {
                     $db->add_column('rpgcalendar_locations', $col, $def);
                 }
+            }
+        }
+
+        // v1.3.0: the planned ICS import was dropped. Remove its leftover schema
+        // from existing installs (the feeds table and the three ICS-only event
+        // columns). Idempotent: guarded by table_exists/field_exists.
+        if ($db->table_exists('rpgcalendar_feeds')) {
+            $db->drop_table('rpgcalendar_feeds');
+        }
+        foreach (['source', 'source_uid', 'feed_id'] as $col) {
+            if ($db->field_exists($col, 'rpgcalendar_events')) {
+                $db->drop_column('rpgcalendar_events', $col);
             }
         }
 

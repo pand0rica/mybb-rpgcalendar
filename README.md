@@ -377,10 +377,10 @@ important-events table.
    settings and the stylesheet).
 2. Click **Uninstall** (drops all plugin tables: `rpgcalendar_events`,
    `rpgcalendar_monthtexts`, `rpgcalendar_event_invites`, `rpgcalendar_calendars`,
-   `rpgcalendar_calendar_members`, `rpgcalendar_calendar_prefs`, `rpgcalendar_feeds`,
-   `rpgcalendar_locations`, `rpgcalendar_weather`, `rpgcalendar_holidays` – your extended
-   events, calendars, invitations, month texts, locations, weather and holidays are deleted;
-   native calendar data is never touched).
+   `rpgcalendar_calendar_members`, `rpgcalendar_calendar_prefs`, `rpgcalendar_locations`,
+   `rpgcalendar_weather`, `rpgcalendar_holidays`, `rpgcalendar_moonphases` – your extended
+   events, calendars, invitations, month texts, locations, weather, holidays and moon phases
+   are deleted; native calendar data is never touched).
 3. Delete the uploaded files (`rpgcalendar.php`, `inc/plugins/rpgcalendar.php`,
    `inc/plugins/rpgcalendar/`, `admin/modules/tools/rpgcalendar.php`, the language files).
 
