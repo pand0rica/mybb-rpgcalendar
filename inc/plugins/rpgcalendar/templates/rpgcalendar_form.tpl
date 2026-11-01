@@ -29,12 +29,8 @@
 <td class="trow1">{$start_inputs}</td>
 </tr>
 <tr>
-<td class="trow2"><strong>{$lang->rpgcalendar_field_multiday}</strong></td>
-<td class="trow2"><label><input type="checkbox" name="multiday" value="1"{$multiday_checked} /> {$lang->rpgcalendar_field_multiday_desc}</label></td>
-</tr>
-<tr>
-<td class="trow1"><strong>{$lang->rpgcalendar_field_end}</strong></td>
-<td class="trow1">{$end_inputs}</td>
+<td class="trow2"><strong>{$lang->rpgcalendar_field_end}</strong></td>
+<td class="trow2">{$end_inputs}<br /><span class="smalltext">{$lang->rpgcalendar_field_end_desc}</span></td>
 </tr>
 <tr>
 <td class="trow2"><strong>{$lang->rpgcalendar_field_repeat}</strong></td>

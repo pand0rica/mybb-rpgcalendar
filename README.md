@@ -71,8 +71,8 @@ Path: **ACP → Tools & Maintenance → RPG Calendar**
   - *Title* – shown in the day cell and the important-events table
   - *Description* – optional, shown (shortened) in the important-events table
   - *Start date* – day / month / year; any year within the configured range is allowed
-  - *Multi-day event* + *End date* – for events spanning several days (may cross month and
-    year borders)
+  - *End date* – same as the start date for a single-day event; a later date makes the event
+    span every day in between (may cross month and year borders)
   - *Repeat* – none / weekly / monthly / yearly, with an optional *Repeat until* date.
     Conventions: a monthly event on the 31st skips months without a 31st; a yearly event
     on Feb 29 only occurs in leap years.
@@ -223,7 +223,7 @@ Any logged-in member can create events directly on the frontend:
    which lists every event on that day.
 2. Click **Add event**. The form offers:
    - *Title* and *Description*
-   - *Start date*, *Multi-day* + *End date*
+   - *Start date* and *End date* (end date after the start date makes it a multi-day event)
    - *Repeat* (weekly/monthly/yearly) with a *Repeat interval* (e.g. every 2 weeks) and an
      optional *Repeat until* date
    - *Important* – also list it in the month's important-events table

@@ -3,6 +3,18 @@
 All notable changes to this project will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [Unreleased]
+
+### Fixed
+- **Multi-day events now show on every day of their span, not just the first.** The end date
+  was only read when a separate *Multi-day* checkbox was ticked; anyone who filled in an end
+  date but left that box unchecked had the end date silently discarded (`end = start`), so the
+  event appeared on its first day only. The checkbox is gone – the end date is now always
+  authoritative (end equal to the start date = single day, a later date = multi-day span). This
+  affected the frontend event form and both ACP forms (events and generated weather/holiday/moon
+  rows). Existing events saved with the old behaviour need to be re-saved once with the correct
+  end date.
+
 ## [1.3.0] - 2026-08-16
 
 ### New

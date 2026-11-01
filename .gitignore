@@ -14,6 +14,10 @@ TESTING.md
 DELIVERY_SUMMARY.md
 NOTES.md
 
+# Dev tooling / non-release reference files
+.continue/
+boilerplate.json
+
 # OS
 .DS_Store
 Thumbs.db

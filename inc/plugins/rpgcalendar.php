@@ -109,6 +109,13 @@ function rpgcalendar_rewrite_calendar_links(): void
         return;
     }
 
+    // the global_start run comes before the theme is loaded – templates->cache() needs its
+    // template set; the global_intermediate run rewrites the already cached templates
+    global $theme;
+    if (empty($theme['templateset'])) {
+        return;
+    }
+
     global $db;
 
     $setting = isset($mybb->settings['rpgcalendar_headerlink_templates'])

@@ -179,28 +179,25 @@ class Rpgcalendar_Frontend
             $errors[] = $lang->rpgcalendar_error_year_range;
         }
 
-        // End date (multi-day only, otherwise = start)
-        if ($mybb->get_input('multiday', MyBB::INPUT_INT) === 1) {
-            $data['end_year']  = $mybb->get_input('end_year', MyBB::INPUT_INT);
-            $data['end_month'] = $mybb->get_input('end_month', MyBB::INPUT_INT);
-            $data['end_day']   = $mybb->get_input('end_day', MyBB::INPUT_INT);
+        // End date: the end date is always authoritative. end == start means a
+        // single-day event, end > start a multi-day span. (There is no separate
+        // "multi-day" checkbox any more – it silently swallowed the end date
+        // whenever it was left unticked, so spans only showed on their first day.)
+        $data['end_year']  = $mybb->get_input('end_year', MyBB::INPUT_INT);
+        $data['end_month'] = $mybb->get_input('end_month', MyBB::INPUT_INT);
+        $data['end_day']   = $mybb->get_input('end_day', MyBB::INPUT_INT);
 
-            if ($data['end_month'] < 1 || $data['end_month'] > 12
-                || $data['end_day'] < 1
-                || $data['end_day'] > Rpgcalendar_Engine::daysInMonth($data['end_year'], $data['end_month'])
-            ) {
-                $errors[] = $lang->rpgcalendar_error_invalid_date;
-            } elseif ($data['end_year'] < $min_year || $data['end_year'] > $max_year) {
-                $errors[] = $lang->rpgcalendar_error_year_range;
-            } elseif (Rpgcalendar_Engine::dateKey($data['end_year'], $data['end_month'], $data['end_day'])
-                < Rpgcalendar_Engine::dateKey($data['start_year'], $data['start_month'], $data['start_day'])
-            ) {
-                $errors[] = $lang->rpgcalendar_error_end_before_start;
-            }
-        } else {
-            $data['end_year']  = $data['start_year'];
-            $data['end_month'] = $data['start_month'];
-            $data['end_day']   = $data['start_day'];
+        if ($data['end_month'] < 1 || $data['end_month'] > 12
+            || $data['end_day'] < 1
+            || $data['end_day'] > Rpgcalendar_Engine::daysInMonth($data['end_year'], $data['end_month'])
+        ) {
+            $errors[] = $lang->rpgcalendar_error_invalid_date;
+        } elseif ($data['end_year'] < $min_year || $data['end_year'] > $max_year) {
+            $errors[] = $lang->rpgcalendar_error_year_range;
+        } elseif (Rpgcalendar_Engine::dateKey($data['end_year'], $data['end_month'], $data['end_day'])
+            < Rpgcalendar_Engine::dateKey($data['start_year'], $data['start_month'], $data['start_day'])
+        ) {
+            $errors[] = $lang->rpgcalendar_error_end_before_start;
         }
 
         // Repeat

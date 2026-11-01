@@ -315,7 +315,6 @@ function rpgcalendar_output_event_form(array $values, array $errors, string $inv
     $repeat_options        = Rpgcalendar_Frontend::repeatOptions((int)$values['repeat_type']);
     $repeat_interval_value = max(1, (int)($values['repeat_interval'] ?? 1));
 
-    $multiday_checked  = !empty($values['multiday']) ? ' checked="checked"' : '';
     $important_checked = !empty($values['important']) ? ' checked="checked"' : '';
 
     // Calendar selector (replaces the old forum-wide checkbox): the chosen
@@ -571,7 +570,6 @@ if ($rpgcalendar_action === 'add') {
         'end_day'            => $day,
         'end_month'          => $month,
         'end_year'           => $year,
-        'multiday'           => 0,
         'repeat_type'        => 0,
         'repeat_interval'    => 1,
         'repeat_until_day'   => 0,
@@ -610,7 +608,6 @@ if ($rpgcalendar_action === 'do_add') {
 
     if ($errors) {
         $values = array_merge($data, [
-            'multiday'    => ($mybb->get_input('multiday', MyBB::INPUT_INT) === 1) ? 1 : 0,
             'calendar_id' => (int)$data['calendar_id'],
             'nav_year'    => $year,
             'nav_month'   => $month,
@@ -713,7 +710,6 @@ if ($rpgcalendar_action === 'edit') {
         'end_day'            => (int)$event['end_day'],
         'end_month'          => (int)$event['end_month'],
         'end_year'           => (int)$event['end_year'],
-        'multiday'           => ((int)$event['start_key'] !== (int)$event['end_key']) ? 1 : 0,
         'repeat_type'        => (int)$event['repeat_type'],
         'repeat_interval'    => (int)$event['repeat_interval'],
         'repeat_until_day'   => $until['day'],
@@ -764,7 +760,6 @@ if ($rpgcalendar_action === 'do_edit') {
 
     if ($errors) {
         $values = array_merge($data, [
-            'multiday'    => ($mybb->get_input('multiday', MyBB::INPUT_INT) === 1) ? 1 : 0,
             'calendar_id' => (int)$data['calendar_id'],
             'nav_year'    => $year,
             'nav_month'   => $month,
