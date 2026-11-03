@@ -1,0 +1,116 @@
+[size=x-large][b]RPG-Kalender[/b][/size]
+[i]Version 1.3.0[/i] – Ein moderner Monatskalender für RPG-Foren: beliebige Inplay-Jahre, Plots, Charaktergeburtstage, Wetter, Feiertage und Mondphasen in einer Ansicht.
+
+[size=large][b]Worum geht's?[/b][/size]
+
+Der MyBB-Kalender kennt nur die Jahre rund um heute – für ein Forum, das im Jahr 1247 oder 3021 spielt, ist er kaum zu gebrauchen. Der RPG-Kalender ersetzt die Ansicht durch eine schlichte Monatsübersicht, die jedes Jahr kann (auch negative), und führt dort alles zusammen: bestehende Forenereignisse, eigene Inplay-Ereignisse, Plots, Charaktergeburtstage, Wetter und Feiertage pro Spielort. Mitglieder legen eigene Termine an, laden andere ein und organisieren alles in farbigen Unterkalendern.
+
+[size=large][b]Highlights[/b][/size]
+
+[list]
+[*] Ereignisse in jedem beliebigen Jahr, mehrtägig und wiederkehrend
+[*] Wetter und Feiertage pro Spielort – für reale Orte automatisch erzeugt
+[*] Mondkalender, auch mit frei konfigurierbarem Fantasy-Mond
+[*] Eigene Termine mit Einladungen per PN
+[*] Persönliche, geteilte und abonnierbare Unterkalender mit eigener Farbe
+[/list]
+
+[size=large][b]Was das Plugin alles kann[/b][/size]
+
+[b]Für Mitglieder[/b]
+[list]
+[*][b]Monatsansicht[/b] – Alle Quellen in einem Raster, darüber der Monatstext (z. B. Wetter), darunter eine Tabelle der wichtigen Ereignisse. Monat und Jahr springst du direkt an. [i](rpgcalendar.php, Kalender-Link im Header auf Wunsch umgebogen)[/i]
+[*][b]Tagesansicht und eigene Termine[/b] – Ein Klick auf den Tag zeigt alle Ereignisse. Dort legst du Termine mit Titel, Beschreibung, Zeitraum, Wiederholung (wöchentlich, monatlich, jährlich, mit Intervall und Enddatum) und Unterkalender an und lädst andere Mitglieder ein. [i](Tagesansicht)[/i]
+[*][b]Einladungen[/b] – Eingeladene bekommen eine PN, sehen den Termin in ihrem Kalender und nehmen an oder lehnen ab; die Terminseite zeigt alle Rückmeldungen. [i](Terminseite)[/i]
+[*][b]Meine Kalender[/b] – Eigene Unterkalender anlegen, für jeden Kalender (auch Geburtstage, Wetter, Feiertage, Mond) eine eigene Farbe wählen oder ihn ausblenden und abonnierbaren Kalendern beitreten. [i](rpgcalendar.php?action=calendars)[/i]
+[*][b]Kalender teilen[/b] – Eigene Kalender mit anderen teilen, nur lesend oder mit Bearbeitungsrecht; die Einladung kommt per PN. [i](Meine Kalender → Teilen)[/i]
+[*][b]Geburtstage[/b] – Aus dem Profil oder aus einem eigenen Profilfeld mit Inplay-Geburtsdatum, dann in jedem Jahr mit passendem Alter.
+[/list]
+
+[b]Für Team & Moderation[/b]
+[list]
+[*][b]Forenweite Termine[/b] – Mitglieder der Team-Gruppen veröffentlichen Termine für alle direkt aus der Tagesansicht.
+[/list]
+
+[b]Für Administratoren[/b]
+[list]
+[*][b]Erweiterte Ereignisse[/b] – Ereignisse in beliebigen Jahren anlegen und verwalten. [i](ACP → Werkzeuge → RPG-Kalender)[/i]
+[*][b]Monatstexte[/b] – Ein freier Text pro Monat und Jahr, z. B. für Wetter oder Besonderheiten. [i](ACP → RPG-Kalender → Monatstexte)[/i]
+[*][b]Spielorte, Wetter und Feiertage[/b] – Für reale Orte erzeugt das Plugin echtes Wetter (Open-Meteo) und Feiertage (Nager.Date) als bearbeitbare Einträge, auf Wunsch mit Wikipedia-Beschreibung; für fiktive Orte trägt das Team sie selbst ein. [i](ACP → RPG-Kalender → Orte)[/i]
+[*][b]Mondkalender[/b] – Die vier Hauptphasen pro Ort, ohne externe Dienste: realer Erdmond oder ein Fantasy-Mond mit eigener Zykluslänge. [i](ACP → RPG-Kalender → Orte)[/i]
+[*][b]Globale Kalender[/b] – Öffentliche oder abonnierbare Unterkalender mit Standardfarbe. [i](ACP → RPG-Kalender → Kalender)[/i]
+[/list]
+
+[b]Zusammenspiel mit anderen Plugins[/b]
+[list]
+[*][b]Plot Control Panel[/b] – Plots mit Datum erscheinen automatisch im Kalender, auf Wunsch als eigene Unterkalender. Ohne passendes Plugin bleibt dieser Teil einfach leer.
+[*][b]MyBB-Kalender[/b] – Bestehende Ereignisse des Forenkalenders bleiben sichtbar (technisch begrenzt auf 1970–2037).
+[/list]
+
+[size=large][b]So sieht's aus[/b][/size]
+
+[i]Screenshot folgt[/i] – Monatsansicht
+[i]Screenshot folgt[/i] – Tabelle der wichtigen Ereignisse
+[i]Screenshot folgt[/i] – Ereignisse und Monatstexte im ACP
+
+[size=large][b]Einstellungen[/b][/size]
+
+[list]
+[*][b]RPG-Kalender aktivieren[/b] und [b]Kalender-Link im Header umbiegen[/b] (auch für eigene Header-Templates)
+[*][b]Erlaubte Gruppen[/b] – wer den Kalender sehen darf [i](leer = alle)[/i]
+[*][b]MyBB-Kalender-ID[/b] und [b]Forenereignisse anzeigen[/b]
+[*][b]Geburtstage anzeigen[/b], [b]Quelle[/b] (Profil oder Profilfeld) und [b]Jahresabstand[/b]
+[*][b]Minimales/maximales Jahr[/b], [b]Standardjahr/-monat[/b]
+[*][b]Wetter-Bilder[/b], [b]Wind-Grenze[/b], [b]Mond-Bilder[/b], [b]Feiertagssymbol[/b], [b]Wikipedia-Anreicherung[/b], [b]Hinweis auf fehlende Daten[/b]
+[*][b]Team-Gruppen[/b] – dürfen forenweite Termine anlegen
+[*][b]Aktuelle Inplay-Monate[/b] – füllt [i]{$rpgcalendar_current_monthtexts}[/i] für Templates und Forenbeschreibungen
+[*][b]HTML in Titeln erlauben[/b] – nur bei vertrauenswürdigen Kalendern [i](Standard: Nein)[/i]
+[/list]
+
+[size=large][b]Voraussetzungen[/b][/size]
+
+[list]
+[*] MyBB 1.8.x
+[*] PHP 7.4 oder 8.x
+[*] Keine Pflicht-Plugins; optional ein Plot-Plugin mit Kalender-Anbindung (z. B. Plot Control Panel)
+[/list]
+
+[size=large][b]Installation[/b][/size]
+
+[list=1]
+[*] Dateien in das MyBB-Stammverzeichnis kopieren (Ordnerstruktur beibehalten)
+[*] ACP → Konfiguration → Plugins → RPG-Kalender → Installieren & aktivieren
+[*] ACP → Konfiguration → Einstellungen → RPG-Kalender → MyBB-Kalender-ID und Jahresbereich deines RPGs festlegen
+[*] Optional: Standardjahr und -monat auf das aktuelle Inplay-Datum setzen
+[/list]
+
+[size=large][b]Update[/b][/size]
+
+[list=1]
+[*] Neue Dateien hochladen und vorhandene überschreiben
+[*] ACP → Konfiguration → Plugins → RPG-Kalender → Deaktivieren und wieder Aktivieren
+[/list]
+Templates und Stylesheet werden aktualisiert; Ereignisse, Kalender und Einstellungen bleiben erhalten.
+
+[size=large][b]Für die Entwicklung[/b][/size]
+
+[list]
+[*] Hook [i]rpgcalendar_collect_events[/i] – Plugins liefern Ereignisse für einen Monat; jede Zeile wird geprüft, kaputte Einträge werden still verworfen
+[*] Hook [i]rpgcalendar_collect_calendars[/i] – eigene virtuelle Unterkalender anbieten
+[*] Hook [i]rpgcalendar_monthview_end[/i] – eigene Ausgabe unter der Monatsansicht
+[/list]
+
+[size=large][b]Grenzen & Ausblick[/b][/size]
+
+Gerechnet wird durchgehend im gregorianischen Kalender, auch für ferne Jahre. Monatliche Wiederholungen am 31. überspringen kürzere Monate, jährliche am 29. Februar die Nicht-Schaltjahre. Ereignisse des MyBB-Kalenders lassen sich technisch nur zwischen 1970 und 2037 anzeigen.
+
+[size=large][b]Download & Quellcode[/b][/size]
+
+&raquo; [url=https://github.com/pand0rica/mybb-rpgcalendar]GitHub: pand0rica/mybb-rpgcalendar[/url] – Änderungen im [url=https://github.com/pand0rica/mybb-rpgcalendar/blob/main/CHANGELOG.md]Changelog[/url], Lizenz GPL-3.0
+
+[size=large][b]Unterstützung[/b][/size]
+
+<i class="cp cp-tea"></i> Wenn dir das Plugin gefällt, kannst du mir gerne einen Tee spendieren: [url=https://ko-fi.com/pand0rica]ko-fi.com/pand0rica[/url]
+
+[size=small]Fragen, Bugs oder Feature-Wünsche gerne als GitHub Issue melden oder hier im Thread.
+Ich freue mich, wenn ihr mir den Link dalasst, wo das Plugin verwendet wird.[/size]
