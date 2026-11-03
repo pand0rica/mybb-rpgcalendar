@@ -1,1 +1,1 @@
-<div class="rpgcalendar_day_add"><a href="{$add_url}" class="button rpgcalendar_addlink">{$lang->rpgcalendar_add_event}</a></div>
+<div class="rpgcalendar_day_add"><form action="rpgcalendar.php" method="get" class="rpgcalendar_delete_form"><input type="hidden" name="action" value="add" /><input type="hidden" name="year" value="{$year}" /><input type="hidden" name="month" value="{$month}" /><input type="hidden" name="day" value="{$day}" /><input type="submit" class="button rpgcalendar_addlink" value="{$lang->rpgcalendar_add_event}" /></form></div>

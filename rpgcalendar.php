@@ -43,6 +43,23 @@ require_once MYBB_ROOT . 'inc/plugins/rpgcalendar/core/database.php';
 require_once MYBB_ROOT . 'inc/plugins/rpgcalendar/core/native_adapter.php';
 
 /** Localized label for a weather condition slug (falls back to the raw slug). */
+/**
+ * Antwort aus Annehmen/Ablehnen-Buttons: input.button liefert sein Label als Wert,
+ * daher eigener Name je Aktion (reply_accept / reply_decline); altes reply=… bleibt gültig.
+ */
+function rpgcalendar_get_reply(): string
+{
+    global $mybb;
+
+    if ($mybb->get_input('reply_accept') !== '') {
+        return 'accept';
+    }
+    if ($mybb->get_input('reply_decline') !== '') {
+        return 'decline';
+    }
+    return $mybb->get_input('reply');
+}
+
 function rpgcalendar_weather_label(string $slug): string
 {
     global $lang;
@@ -648,7 +665,7 @@ if ($rpgcalendar_action === 'invite_respond') {
     verify_post_check($mybb->get_input('my_post_key'));
 
     $eid   = $mybb->get_input('eid', MyBB::INPUT_INT);
-    $reply = $mybb->get_input('reply');
+    $reply = rpgcalendar_get_reply();
     $invite = $rpgcalendar_database->getInvite($eid, (int)$mybb->user['uid']);
     if ($invite === null) {
         error_no_permission();
@@ -1008,7 +1025,7 @@ if ($rpgcalendar_action === 'do_share_respond') {
     if ($member === null || (int)$member['status'] !== 0) {
         error_no_permission();
     }
-    if ($mybb->get_input('reply') === 'accept') {
+    if (rpgcalendar_get_reply() === 'accept') {
         $rpgcalendar_database->setMemberStatus($cid, $viewer_uid, 1);
     } else {
         $rpgcalendar_database->removeMember($cid, $viewer_uid);

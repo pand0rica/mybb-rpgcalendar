@@ -1,1 +1,1 @@
-<a href="{$share_url}" class="button rpgcalendar_btn_share">{$lang->rpgcalendar_share_link}</a>
+<form action="rpgcalendar.php" method="get" class="rpgcalendar_delete_form"><input type="hidden" name="action" value="share" /><input type="hidden" name="cid" value="{$cid}" /><input type="submit" class="button rpgcalendar_btn_share" value="{$lang->rpgcalendar_share_link}" /></form>

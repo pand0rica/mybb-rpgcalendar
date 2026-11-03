@@ -110,7 +110,7 @@ $l['rpgcalendar_field_forumwide']        = "Forenweit";
 $l['rpgcalendar_field_forumwide_desc']   = "Dieses Ereignis für alle sichtbar machen (nur Team). Sonst ist es persönlich.";
 $l['rpgcalendar_field_invites']          = "Mitglieder einladen";
 $l['rpgcalendar_field_invites_desc']     = "Tippe einen Benutzernamen und wähle aus den Vorschlägen. Eingeladene sehen das Ereignis und werden per PN benachrichtigt.";
-$l['rpgcalendar_ac_placeholder']         = "Nach einem Benutzer suchen ...";
+$l['rpgcalendar_ac_placeholder']         = "Nach einem Account suchen ...";
 $l['rpgcalendar_field_calendar']         = "Kalender";
 $l['rpgcalendar_field_calendar_desc']    = "Zu welchem Teilkalender dieses Ereignis gehört. Ein globaler Kalender ist für alle sichtbar; ein persönlicher nur für dich und eingeladene Mitglieder.";
 
