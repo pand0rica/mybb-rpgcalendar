@@ -3,6 +3,6 @@
 <form action="rpgcalendar.php?action=do_calendar_join" method="post" class="rpgcalendar_calrow_form">
 <input type="hidden" name="my_post_key" value="{$post_code}" />
 <input type="hidden" name="cid" value="{$join_cid}" />
-<button type="submit" class="button">{$lang->rpgcalendar_join}</button>
+<input type="submit" class="button" value="{$lang->rpgcalendar_join}" />
 </form>
 </div>

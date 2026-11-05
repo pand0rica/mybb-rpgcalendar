@@ -5,6 +5,6 @@
 <input type="hidden" name="my_post_key" value="{$post_code}" />
 <input type="hidden" name="cid" value="{$cid}" />
 <input type="hidden" name="uid" value="{$member_uid}" />
-<button type="submit" class="button rpgcalendar_btn_delete">{$lang->rpgcalendar_share_remove}</button>
+<input type="submit" class="button rpgcalendar_btn_delete" value="{$lang->rpgcalendar_share_remove}" />
 </form>
 </div>

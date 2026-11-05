@@ -5,6 +5,20 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Security (review)
+- ACP CSRF protection uses MyBB's native mechanism (dev kit `debugging.md` #23): write
+  handlers only act on POST and `admin/index.php` validates the `my_post_key` itself –
+  no own key check or helper.
+
+### Fixed (review)
+- **Mixed action buttons.** “Edit event”, “Add event” and “Share” were `<a class="button">`
+  links, the other actions `<button>` elements. All actions are now
+  `<input type="submit" class="button">` (navigation via GET forms). Accept/decline buttons
+  post `reply_accept` / `reply_decline`; the old `reply=accept|decline` is still accepted.
+- `global` declarations in `rpgcalendar_rewrite_calendar_links()` moved to the start of the
+  function; stylesheet query no longer quotes the integer `sid`.
+- German: “Nach einem Benutzer suchen” → “Nach einem Account suchen”.
+
 ### Fixed
 - **Multi-day events now show on every day of their span, not just the first.** The end date
   was only read when a separate *Multi-day* checkbox was ticked; anyone who filled in an end

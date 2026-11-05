@@ -6,7 +6,7 @@
 <input type="hidden" name="year" value="{$year}" />
 <input type="hidden" name="month" value="{$month}" />
 <input type="hidden" name="day" value="{$resp_day}" />
-<button type="submit" name="reply" value="accept" class="button rpgcalendar_btn_accept">{$lang->rpgcalendar_invite_accept}</button>
-<button type="submit" name="reply" value="decline" class="button rpgcalendar_btn_decline">{$lang->rpgcalendar_invite_decline}</button>
+<input type="submit" name="reply_accept" class="button rpgcalendar_btn_accept" value="{$lang->rpgcalendar_invite_accept}" />
+<input type="submit" name="reply_decline" class="button rpgcalendar_btn_decline" value="{$lang->rpgcalendar_invite_decline}" />
 </form>
 </div>

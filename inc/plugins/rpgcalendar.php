@@ -32,7 +32,7 @@ function rpgcalendar_info(): array
     return [
         'name'          => 'RPG Calendar',
         'description'   => 'Modern calendar replacement: native events, extended events in any year, member event creation with invitations, personal & shared sub-calendars, per-location weather, holidays &amp; moon phases (auto-generated), plots via provider hook, monthly free texts and important-event tables.',
-        'website'       => 'https://github.com/pand0rica/rpgcalendar',
+        'website'       => 'https://github.com/pand0rica/mybb-rpgcalendar',
         'author'        => 'pand0rica',
         'authorsite'    => 'https://github.com/pand0rica',
         'version'       => '1.3.0',
@@ -99,7 +99,7 @@ function rpgcalendar_uninstall(): void
  */
 function rpgcalendar_rewrite_calendar_links(): void
 {
-    global $mybb, $templates;
+    global $mybb, $templates, $theme, $db;
 
     if (!isset($mybb->settings['rpgcalendar_enabled']) || (int)$mybb->settings['rpgcalendar_enabled'] !== 1) {
         return;
@@ -111,12 +111,9 @@ function rpgcalendar_rewrite_calendar_links(): void
 
     // the global_start run comes before the theme is loaded – templates->cache() needs its
     // template set; the global_intermediate run rewrites the already cached templates
-    global $theme;
     if (empty($theme['templateset'])) {
         return;
     }
-
-    global $db;
 
     $setting = isset($mybb->settings['rpgcalendar_headerlink_templates'])
         ? (string)$mybb->settings['rpgcalendar_headerlink_templates'] : 'header_menu_calendar';

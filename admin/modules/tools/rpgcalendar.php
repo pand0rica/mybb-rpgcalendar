@@ -21,9 +21,6 @@ $page->add_breadcrumb_item($lang->rpgcalendar, 'index.php?module=tools-rpgcalend
 $rpgcalendar_db = new Rpgcalendar_Database();
 $action = $mybb->get_input('action');
 
-if ($mybb->request_method === 'post') {
-    verify_post_check($mybb->get_input('my_post_key'));
-}
 
 // ---------------------------------------------------------------------
 // Helpers
