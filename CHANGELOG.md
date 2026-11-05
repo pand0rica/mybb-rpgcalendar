@@ -5,6 +5,9 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Changed
+- Stylesheet uses plain colour/size values instead of the `--h4w-*` custom properties of one specific forum theme. (Forum-specific theming lives on the separate `h4w` branch.)
+
 ### Security (review)
 - ACP CSRF protection uses MyBB's native mechanism (dev kit `debugging.md` #23): write
   handlers only act on POST and `admin/index.php` validates the `my_post_key` itself –
