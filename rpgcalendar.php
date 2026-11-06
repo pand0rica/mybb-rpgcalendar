@@ -44,6 +44,58 @@ require_once MYBB_ROOT . 'inc/plugins/rpgcalendar/core/native_adapter.php';
 
 /** Localized label for a weather condition slug (falls back to the raw slug). */
 /**
+ * Shortens already-rendered (and therefore already-escaped) MyCode HTML to
+ * $limit visible characters for the important-events table. Only links
+ * (<a>) survive; every other tag is dropped. Text is never cut inside a
+ * tag or an HTML entity, open links are closed, and "&hellip;" is appended
+ * when something was cut.
+ */
+function rpgcalendar_excerpt_html(string $html, int $limit): string
+{
+    $html  = strip_tags($html, '<a>');
+    $html  = trim((string)preg_replace('/\s+/u', ' ', $html));
+    $parts = preg_split(
+        '/(<[^>]*>|&(?:#[0-9]+|#x[0-9a-f]+|[a-z][a-z0-9]*);)/i',
+        $html,
+        -1,
+        PREG_SPLIT_DELIM_CAPTURE | PREG_SPLIT_NO_EMPTY
+    );
+
+    $out  = '';
+    $len  = 0;
+    $open = 0;
+    $cut  = false;
+    foreach ((array)$parts as $part) {
+        if ($part[0] === '<') {
+            if (stripos($part, '<a ') === 0 || strcasecmp($part, '<a>') === 0) {
+                $open++;
+            } elseif (strcasecmp($part, '</a>') === 0 && $open > 0) {
+                $open--;
+            }
+            $out .= $part;
+            continue;
+        }
+
+        $is_entity = ($part[0] === '&' && strlen($part) > 2 && substr($part, -1) === ';');
+        $size      = $is_entity ? 1 : my_strlen($part);
+        if ($len + $size > $limit) {
+            if (!$is_entity) {
+                $out .= my_substr($part, 0, $limit - $len);
+            }
+            $cut = true;
+            break;
+        }
+        $out .= $part;
+        $len += $size;
+    }
+
+    if ($cut) {
+        $out .= '&hellip;';
+    }
+    return $out . str_repeat('</a>', $open);
+}
+
+/**
  * Antwort aus Annehmen/Ablehnen-Buttons: input.button liefert sein Label als Wert,
  * daher eigener Name je Aktion (reply_accept / reply_decline); altes reply=… bleibt gültig.
  */
@@ -1736,16 +1788,9 @@ foreach ($month_data['important'] as $event) {
             'nl2br'           => 0,
             'filter_badwords' => 1,
         ]);
-        $description = html_entity_decode(strip_tags($description), ENT_QUOTES, 'UTF-8');
-        $description = trim(preg_replace('/\s+/u', ' ', $description));
-
-        // Escape first, then append the ellipsis entity (see ACP month texts)
-        $truncated   = (my_strlen($description) > 160);
-        $excerpt     = htmlspecialchars_uni($truncated ? my_substr($description, 0, 160) : $description);
-        if ($truncated) {
-            $excerpt .= '&hellip;';
-        }
-        if ($description !== '') {
+        // Keep links only, shorten by visible characters without cutting a tag
+        $excerpt = rpgcalendar_excerpt_html($description, 160);
+        if (trim(strip_tags($excerpt)) !== '') {
             $row_description = '<div class="smalltext">' . $excerpt . '</div>';
         }
     }
