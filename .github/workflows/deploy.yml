@@ -1,0 +1,74 @@
+name: Deploy to h4w
+
+# Manual only. Always deploys the h4w branch (main + h4w customisations).
+# "live" is protected by the GitHub environment "h4w-live" (required reviewer).
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "Deploy target"
+        type: choice
+        options: [test, live]
+        default: test
+
+permissions:
+  contents: read
+
+concurrency:
+  group: h4w-deploy-${{ inputs.target }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.target == 'live' && 'h4w-live' || 'h4w-test' }}
+    env:
+      SSH_HOST: ${{ vars.H4W_SSH_HOST }}
+      SSH_PORT: ${{ vars.H4W_SSH_PORT }}
+      SSH_USER: ${{ vars.H4W_SSH_USER }}
+      REMOTE_ROOT: ${{ vars.H4W_REMOTE_ROOT }}
+      SITE_URL: ${{ vars.H4W_SITE_URL }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: h4w
+
+      - name: Lint
+        run: find . -name '*.php' -not -path './tests/*' -print0 | xargs -0 -n1 php -l >/dev/null
+
+      - name: Prepare SSH
+        env:
+          SSH_KEY: ${{ secrets.H4W_SSH_KEY }}
+          KNOWN_HOSTS: ${{ vars.H4W_SSH_KNOWN_HOSTS }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+
+      - name: Upload plugin files
+        run: |
+          # Only plugin files; --delete is limited to the plugin's own directory.
+          SSH="ssh -i ~/.ssh/id_deploy -p $SSH_PORT -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes"
+          rsync -rltv -e "$SSH" --delete \
+            inc/plugins/rpgcalendar/ "$SSH_USER@$SSH_HOST:$REMOTE_ROOT/inc/plugins/rpgcalendar/"
+          rsync -rltv -e "$SSH" --relative \
+            inc/plugins/rpgcalendar.php \
+            rpgcalendar.php \
+            admin/modules/tools/rpgcalendar.php \
+            inc/languages/english/rpgcalendar.lang.php \
+            inc/languages/english/admin/rpgcalendar.lang.php \
+            inc/languages/deutsch_du/rpgcalendar.lang.php \
+            inc/languages/deutsch_du/admin/rpgcalendar.lang.php \
+            "$SSH_USER@$SSH_HOST:$REMOTE_ROOT/"
+
+      - name: Lint on server
+        run: |
+          ssh -i ~/.ssh/id_deploy -p "$SSH_PORT" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
+            "$SSH_USER@$SSH_HOST" "cd '$REMOTE_ROOT' && for f in rpgcalendar.php inc/plugins/rpgcalendar.php admin/modules/tools/rpgcalendar.php \$(find inc/plugins/rpgcalendar -name '*.php'); do php -l \$f >/dev/null || exit 1; done && echo server-lint-ok"
+
+      - name: Check page
+        run: |
+          code=$(curl -s -o /dev/null -w '%{http_code}' "$SITE_URL/rpgcalendar.php")
+          echo "rpgcalendar.php -> HTTP $code"
+          test "$code" = "200"
