@@ -1,0 +1,5 @@
+{
+  "codename": "rpgcalendar",
+  "reactivate": "cycle",
+  "check": "rpgcalendar.php"
+}
