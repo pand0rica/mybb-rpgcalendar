@@ -1721,14 +1721,33 @@ foreach ($month_data['important'] as $event) {
 
     $row_description = '';
     if (trim($event['description']) !== '') {
+        // Render MyCode, then reduce to plain text so the excerpt can be
+        // shortened safely without cutting through tags/BBCode.
+        if (!isset($rpgcalendar_excerpt_parser)) {
+            require_once MYBB_ROOT . 'inc/class_parser.php';
+            $rpgcalendar_excerpt_parser = new postParser();
+        }
+        $description = $rpgcalendar_excerpt_parser->parse_message($event['description'], [
+            'allow_html'      => 0,
+            'allow_mycode'    => 1,
+            'allow_smilies'   => 0,
+            'allow_imgcode'   => 0,
+            'allow_videocode' => 0,
+            'nl2br'           => 0,
+            'filter_badwords' => 1,
+        ]);
+        $description = html_entity_decode(strip_tags($description), ENT_QUOTES, 'UTF-8');
+        $description = trim(preg_replace('/\s+/u', ' ', $description));
+
         // Escape first, then append the ellipsis entity (see ACP month texts)
-        $description = trim($event['description']);
         $truncated   = (my_strlen($description) > 160);
         $excerpt     = htmlspecialchars_uni($truncated ? my_substr($description, 0, 160) : $description);
         if ($truncated) {
             $excerpt .= '&hellip;';
         }
-        $row_description = '<div class="smalltext">' . $excerpt . '</div>';
+        if ($description !== '') {
+            $row_description = '<div class="smalltext">' . $excerpt . '</div>';
+        }
     }
 
     eval('$eventtable_rows .= "' . $templates->get('rpgcalendar_eventtable_row') . '";');
