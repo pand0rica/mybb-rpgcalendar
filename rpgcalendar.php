@@ -45,14 +45,15 @@ require_once MYBB_ROOT . 'inc/plugins/rpgcalendar/core/native_adapter.php';
 /** Localized label for a weather condition slug (falls back to the raw slug). */
 /**
  * Shortens already-rendered (and therefore already-escaped) MyCode HTML to
- * $limit visible characters for the important-events table. Only links
- * (<a>) survive; every other tag is dropped. Text is never cut inside a
- * tag or an HTML entity, open links are closed, and "&hellip;" is appended
- * when something was cut.
+ * $limit visible characters for the important-events table. All markup the
+ * parser produced is kept (bold, colours, lists, quotes, links ...). Text is
+ * never cut inside a tag or an HTML entity, every tag still open at the cut
+ * is closed again, and "&hellip;" is appended when something was cut.
  */
 function rpgcalendar_excerpt_html(string $html, int $limit): string
 {
-    $html  = strip_tags($html, '<a>');
+    static $void = ['br' => 1, 'hr' => 1, 'img' => 1, 'wbr' => 1];
+
     $html  = trim((string)preg_replace('/\s+/u', ' ', $html));
     $parts = preg_split(
         '/(<[^>]*>|&(?:#[0-9]+|#x[0-9a-f]+|[a-z][a-z0-9]*);)/i',
@@ -61,16 +62,30 @@ function rpgcalendar_excerpt_html(string $html, int $limit): string
         PREG_SPLIT_DELIM_CAPTURE | PREG_SPLIT_NO_EMPTY
     );
 
-    $out  = '';
-    $len  = 0;
-    $open = 0;
-    $cut  = false;
+    $out   = '';
+    $len   = 0;
+    $stack = [];
+    $cut   = false;
     foreach ((array)$parts as $part) {
         if ($part[0] === '<') {
-            if (stripos($part, '<a ') === 0 || strcasecmp($part, '<a>') === 0) {
-                $open++;
-            } elseif (strcasecmp($part, '</a>') === 0 && $open > 0) {
-                $open--;
+            if (preg_match('/^<(\/?)([a-z][a-z0-9]*)/i', $part, $m)) {
+                $name = strtolower($m[2]);
+                if ($m[1] === '/') {
+                    // close the innermost open tag of that name
+                    $pos = false;
+                    for ($i = count($stack) - 1; $i >= 0; $i--) {
+                        if ($stack[$i] === $name) {
+                            $pos = $i;
+                            break;
+                        }
+                    }
+                    if ($pos === false) {
+                        continue; // stray closing tag
+                    }
+                    $stack = array_slice($stack, 0, $pos);
+                } elseif (!isset($void[$name]) && substr($part, -2) !== '/>') {
+                    $stack[] = $name;
+                }
             }
             $out .= $part;
             continue;
@@ -89,10 +104,10 @@ function rpgcalendar_excerpt_html(string $html, int $limit): string
         $len += $size;
     }
 
-    if ($cut) {
-        $out .= '&hellip;';
+    while ($stack) {
+        $out .= '</' . array_pop($stack) . '>';
     }
-    return $out . str_repeat('</a>', $open);
+    return $cut ? $out . '&hellip;' : $out;
 }
 
 /**
@@ -1773,8 +1788,7 @@ foreach ($month_data['important'] as $event) {
 
     $row_description = '';
     if (trim($event['description']) !== '') {
-        // Render MyCode, then reduce to plain text so the excerpt can be
-        // shortened safely without cutting through tags/BBCode.
+        // Render MyCode (no raw HTML), then shorten the rendered markup safely.
         if (!isset($rpgcalendar_excerpt_parser)) {
             require_once MYBB_ROOT . 'inc/class_parser.php';
             $rpgcalendar_excerpt_parser = new postParser();
@@ -1788,7 +1802,7 @@ foreach ($month_data['important'] as $event) {
             'nl2br'           => 0,
             'filter_badwords' => 1,
         ]);
-        // Keep links only, shorten by visible characters without cutting a tag
+        // Keeps all rendered BBCode, shortens by visible characters
         $excerpt = rpgcalendar_excerpt_html($description, 160);
         if (trim(strip_tags($excerpt)) !== '') {
             $row_description = '<div class="smalltext">' . $excerpt . '</div>';
