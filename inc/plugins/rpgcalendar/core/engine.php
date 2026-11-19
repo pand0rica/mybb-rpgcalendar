@@ -403,7 +403,7 @@ class Rpgcalendar_Engine
      * Weather and holidays are not part of the mini calendar; the full moon is
      * reported separately so it can be drawn as a glow.
      *
-     * @param array $opts show_birthdays / show_events / only_important / show_scenes / show_moon (bool-ish)
+     * @param array $opts show_birthdays / show_events / only_important / edges_only / show_scenes / show_moon (bool-ish)
      * @return array ['year','month','weeks' => [[cell|null x7]], 'today_day']
      *               cell = ['day','kind' => ''|birthday|event|scene,'moon' => ''|full,'items' => [['type','title','url']]]
      */
@@ -445,6 +445,22 @@ class Rpgcalendar_Engine
                     if ($type === 'event' && empty($opts['show_events']) && empty($opts['only_important'])) {
                         continue;
                     }
+                    // Multi-day events/plots: optionally mark only the first and last day
+                    $edge = '';
+                    if ($type === 'event' && !empty($opts['edges_only']) && isset($e['start'], $e['end'])) {
+                        $cell_key  = self::dateKey($year, $month, (int)$cell['day']);
+                        $start_key = self::dateKey((int)$e['start']['y'], (int)$e['start']['m'], (int)$e['start']['d']);
+                        $end_key   = self::dateKey((int)$e['end']['y'], (int)$e['end']['m'], (int)$e['end']['d']);
+                        if ($end_key > $start_key) {
+                            if ($cell_key === $start_key) {
+                                $edge = 'start';
+                            } elseif ($cell_key === $end_key) {
+                                $edge = 'end';
+                            } else {
+                                continue; // a middle day of a multi-day event
+                            }
+                        }
+                    }
                     // "only important events": scenes and birthdays are never filtered
                     if ($type === 'event' && !empty($opts['only_important']) && empty($e['important'])) {
                         continue;
@@ -454,6 +470,7 @@ class Rpgcalendar_Engine
                         'type'  => $type,
                         'title' => (string)($e['title'] ?? ''),
                         'url'   => (string)($e['url'] ?? ''),
+                        'edge'  => $edge,
                     ];
                     if ($rank[$type] > $rank[$kind]) {
                         $kind = $type;

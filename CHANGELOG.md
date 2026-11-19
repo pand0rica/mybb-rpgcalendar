@@ -10,6 +10,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 - **Per-account mini calendar settings** (`rpgcalendar.php?action=minisettings`, new table `rpgcalendar_user_settings`): on/off, position, and what to show (birthdays, events/plots, scenes, full moon). New ACP settings: master switch, default on/off, default position.
 - **Scenes via provider hook.** Provider events with `source = 'scene'` (delivered by the Logbook plugin) get their own highlight in the mini calendar.
 - Mini calendar option **only show important events** (per account; scenes and birthdays are not filtered). Existing installs get the new column on re-activation.
+- Mini calendar option **mark multi-day events/plots only at start and end** (per account; the popover labels the day as start/end). Existing installs get the new column on re-activation.
 - Mini calendar layout is more compact and shows months side by side (two per row, stacked on narrow screens); all colours are CSS custom properties (`--rpgcal-mini-*`) so themes can restyle them.
 - New global stylesheet `rpgcalendar_mini.css` and script `rpgcalendar-mini.js`.
 

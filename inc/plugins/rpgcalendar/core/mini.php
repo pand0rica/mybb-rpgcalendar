@@ -91,7 +91,9 @@ class Rpgcalendar_Mini
                         foreach ($cell['items'] as $item) {
                             $items[] = [
                                 'type'  => $item['type'],
-                                'label' => $type_labels[$item['type']] ?? '',
+                                'label' => ($type_labels[$item['type']] ?? '')
+                                    . (($item['edge'] ?? '') === 'start' ? ' · ' . $lang->rpgcalendar_mini_edge_start : '')
+                                    . (($item['edge'] ?? '') === 'end' ? ' · ' . $lang->rpgcalendar_mini_edge_end : ''),
                                 'title' => $item['title'],
                                 'url'   => $item['url'],
                             ];

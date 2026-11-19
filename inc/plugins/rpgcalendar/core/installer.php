@@ -97,6 +97,7 @@ class Rpgcalendar_Installer
             `show_birthdays` TINYINT(1) NOT NULL DEFAULT 1,
             `show_events`   TINYINT(1) NOT NULL DEFAULT 1,
             `only_important` TINYINT(1) NOT NULL DEFAULT 0,
+            `edges_only`    TINYINT(1) NOT NULL DEFAULT 0,
             `show_scenes`   TINYINT(1) NOT NULL DEFAULT 1,
             `show_moon`     TINYINT(1) NOT NULL DEFAULT 1,
             PRIMARY KEY (`uid`)
@@ -233,6 +234,12 @@ class Rpgcalendar_Installer
         if ($db->table_exists('rpgcalendar_user_settings') && !$db->field_exists('only_important', 'rpgcalendar_user_settings')) {
             $db->add_column('rpgcalendar_user_settings', 'only_important',
                 "TINYINT(1) NOT NULL DEFAULT 0 AFTER `show_events`");
+        }
+
+        // v1.4: mini calendar "mark multi-day events only at start/end"
+        if ($db->table_exists('rpgcalendar_user_settings') && !$db->field_exists('edges_only', 'rpgcalendar_user_settings')) {
+            $db->add_column('rpgcalendar_user_settings', 'edges_only',
+                "TINYINT(1) NOT NULL DEFAULT 0 AFTER `only_important`");
         }
 
         if (!$db->field_exists('repeat_interval', 'rpgcalendar_events')) {
