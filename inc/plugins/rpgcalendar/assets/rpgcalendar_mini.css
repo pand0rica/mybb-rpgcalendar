@@ -106,3 +106,22 @@
 @media (max-width: 480px) {
     .rpgcalendar_mini_month { flex-basis: 100%; max-width: none; }
 }
+
+/* h4w: colours from the h4w theme tokens (every theme defines accent-new,
+   accent-new-color, linkcolor-main, bg-1, border; accent-2/-3 only some).
+   Scene = solid accent; event/birthday = graded tints of the accent that keep the
+   page's own text colour, so they stay readable in light and dark themes. */
+.rpgcalendar_mini {
+    --rpgcal-mini-scene: var(--h4w-accent-new, #2563eb);
+    --rpgcal-mini-scene-text: var(--h4w-accent-new-color, #ffffff);
+    --rpgcal-mini-event: color-mix(in srgb, var(--h4w-accent-2, var(--h4w-accent-new, #8b5cf6)) 45%, transparent);
+    --rpgcal-mini-birthday: color-mix(in srgb, var(--h4w-accent-3, var(--h4w-linkcolor-main, #f59e0b)) 24%, transparent);
+    --rpgcal-mini-border: var(--h4w-border, rgba(128, 128, 128, 0.35));
+    --rpgcal-mini-pop-bg: var(--h4w-bg-1, #ffffff);
+    --rpgcal-mini-pop-link: var(--h4w-linkcolor-main, #1d4ed8);
+}
+.rpgcalendar_mini_cell--event,
+.rpgcalendar_mini_cell--birthday,
+.rpgcalendar_mini_popover { color: inherit; }
+.rpgcalendar_mini_swatch--event,
+.rpgcalendar_mini_swatch--birthday { box-shadow: inset 0 0 0 1px var(--rpgcal-mini-border); }
