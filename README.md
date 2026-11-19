@@ -273,7 +273,8 @@ the browser) and links to the full calendar. The big calendar is unchanged and h
 
 **Members:** *Calendar → My calendars → Mini calendar settings* (`rpgcalendar.php?action=minisettings`)
 lets every account choose whether the mini calendar is shown, where (above the inplay or in the
-header) and what it contains: birthdays, events/plots, scenes, full-moon glow. Scenes come from
+header) and what it contains: birthdays, events/plots (optionally **only important events**),
+scenes, full-moon glow. Several months are shown side by side (two per row). Scenes come from
 the optional Logbook plugin: a character account sees its own scenes, a main account the scenes of
 all linked characters.
 ![Step: Mini calendar settings](docs/screenshots/mini-calendar-settings.png)

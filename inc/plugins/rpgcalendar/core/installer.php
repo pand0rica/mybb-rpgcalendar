@@ -96,6 +96,7 @@ class Rpgcalendar_Installer
             `mini_position` VARCHAR(10) NOT NULL DEFAULT 'inplay',
             `show_birthdays` TINYINT(1) NOT NULL DEFAULT 1,
             `show_events`   TINYINT(1) NOT NULL DEFAULT 1,
+            `only_important` TINYINT(1) NOT NULL DEFAULT 0,
             `show_scenes`   TINYINT(1) NOT NULL DEFAULT 1,
             `show_moon`     TINYINT(1) NOT NULL DEFAULT 1,
             PRIMARY KEY (`uid`)
@@ -227,6 +228,12 @@ class Rpgcalendar_Installer
     public static function upgradeSchema(): void
     {
         global $db;
+
+        // v1.4: mini calendar "only important events" option
+        if ($db->table_exists('rpgcalendar_user_settings') && !$db->field_exists('only_important', 'rpgcalendar_user_settings')) {
+            $db->add_column('rpgcalendar_user_settings', 'only_important',
+                "TINYINT(1) NOT NULL DEFAULT 0 AFTER `show_events`");
+        }
 
         if (!$db->field_exists('repeat_interval', 'rpgcalendar_events')) {
             $db->add_column('rpgcalendar_events', 'repeat_interval',

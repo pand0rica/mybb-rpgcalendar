@@ -1208,6 +1208,7 @@ if ($rpgcalendar_action === 'minisettings') {
     $mini_pos_header_selected = ($mini_settings['mini_position'] === 'header') ? ' selected="selected"' : '';
     $mini_birthdays_checked  = $mini_settings['show_birthdays'] ? ' checked="checked"' : '';
     $mini_events_checked     = $mini_settings['show_events'] ? ' checked="checked"' : '';
+    $mini_important_checked  = $mini_settings['only_important'] ? ' checked="checked"' : '';
     $mini_scenes_checked     = $mini_settings['show_scenes'] ? ' checked="checked"' : '';
     $mini_moon_checked       = $mini_settings['show_moon'] ? ' checked="checked"' : '';
 
@@ -1231,6 +1232,7 @@ if ($rpgcalendar_action === 'do_minisettings') {
         'mini_position'  => ($mybb->get_input('mini_position') === 'header') ? 'header' : 'inplay',
         'show_birthdays' => $mybb->get_input('show_birthdays', MyBB::INPUT_INT) === 1,
         'show_events'    => $mybb->get_input('show_events', MyBB::INPUT_INT) === 1,
+        'only_important' => $mybb->get_input('only_important', MyBB::INPUT_INT) === 1,
         'show_scenes'    => $mybb->get_input('show_scenes', MyBB::INPUT_INT) === 1,
         'show_moon'      => $mybb->get_input('show_moon', MyBB::INPUT_INT) === 1,
     ]);
