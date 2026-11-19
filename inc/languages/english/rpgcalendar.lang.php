@@ -237,6 +237,7 @@ $l['rpgcalendar_minisettings_pos_header']     = "In the header (all pages)";
 $l['rpgcalendar_minisettings_show']           = "Show:";
 $l['rpgcalendar_minisettings_show_birthdays'] = "Birthdays";
 $l['rpgcalendar_minisettings_show_events']    = "Events and plots";
+$l['rpgcalendar_minisettings_only_important'] = "Only show important events";
 $l['rpgcalendar_minisettings_show_scenes']    = "Scenes (Logbook)";
 $l['rpgcalendar_minisettings_show_moon']      = "Highlight the full moon";
 $l['rpgcalendar_minisettings_scenes_hint']    = "Scenes: a character account sees its own scenes, a main account additionally sees the scenes of all linked characters.";

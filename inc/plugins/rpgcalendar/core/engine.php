@@ -403,7 +403,7 @@ class Rpgcalendar_Engine
      * Weather and holidays are not part of the mini calendar; the full moon is
      * reported separately so it can be drawn as a glow.
      *
-     * @param array $opts show_birthdays / show_events / show_scenes / show_moon (bool-ish)
+     * @param array $opts show_birthdays / show_events / only_important / show_scenes / show_moon (bool-ish)
      * @return array ['year','month','weeks' => [[cell|null x7]], 'today_day']
      *               cell = ['day','kind' => ''|birthday|event|scene,'moon' => ''|full,'items' => [['type','title','url']]]
      */
@@ -443,6 +443,10 @@ class Rpgcalendar_Engine
                         continue;
                     }
                     if ($type === 'event' && empty($opts['show_events'])) {
+                        continue;
+                    }
+                    // "only important events": scenes and birthdays are never filtered
+                    if ($type === 'event' && !empty($opts['only_important']) && empty($e['important'])) {
                         continue;
                     }
 

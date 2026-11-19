@@ -22,6 +22,7 @@
 <p><strong>{$lang->rpgcalendar_minisettings_show}</strong></p>
 <p><label><input type="checkbox" name="show_birthdays" value="1"{$mini_birthdays_checked} /> {$lang->rpgcalendar_minisettings_show_birthdays}</label><br />
 <label><input type="checkbox" name="show_events" value="1"{$mini_events_checked} /> {$lang->rpgcalendar_minisettings_show_events}</label><br />
+<label><input type="checkbox" name="only_important" value="1"{$mini_important_checked} /> {$lang->rpgcalendar_minisettings_only_important}</label><br />
 <label><input type="checkbox" name="show_scenes" value="1"{$mini_scenes_checked} /> {$lang->rpgcalendar_minisettings_show_scenes}</label><br />
 <label><input type="checkbox" name="show_moon" value="1"{$mini_moon_checked} /> {$lang->rpgcalendar_minisettings_show_moon}</label></p>
 <p class="smalltext">{$lang->rpgcalendar_minisettings_scenes_hint}</p>
