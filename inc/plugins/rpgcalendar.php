@@ -147,10 +147,11 @@ function rpgcalendar_rewrite_calendar_links(): void
  */
 function rpgcalendar_set_mini_calendar(): void
 {
-    global $mybb, $rpgcalendar_mini_header, $rpgcalendar_mini_inplay;
+    global $mybb, $rpgcalendar_mini_header, $rpgcalendar_mini_inplay, $rpgcalendar_mini_category;
 
-    $rpgcalendar_mini_header = '';
-    $rpgcalendar_mini_inplay = '';
+    $rpgcalendar_mini_header   = '';
+    $rpgcalendar_mini_inplay   = '';
+    $rpgcalendar_mini_category = '';
 
     if ((int)($mybb->settings['rpgcalendar_enabled'] ?? 0) !== 1
         || (int)($mybb->settings['rpgcalendar_mini_enabled'] ?? 0) !== 1
@@ -181,6 +182,9 @@ function rpgcalendar_set_mini_calendar(): void
 
     if ($settings['mini_position'] === 'header') {
         $rpgcalendar_mini_header = $html;
+    } elseif ((int)($mybb->settings['rpgcalendar_mini_inplay_fid'] ?? 0) > 0) {
+        // rendered inside the configured inplay category (see forumbits/pre_output hooks)
+        $rpgcalendar_mini_category = $html;
     } else {
         $rpgcalendar_mini_inplay = $html;
     }
@@ -259,6 +263,19 @@ function rpgcalendar_set_current_monthtexts(): void
  */
 function rpgcalendar_forumbits_monthtexts($forum)
 {
+    global $mybb, $rpgcalendar_mini_category;
+
+    // Mini calendar inside the configured inplay category: append a sentinel to
+    // the category description, i.e. between the category header and its first
+    // sub-forum. The real HTML is swapped in at pre_output_page.
+    if (!empty($rpgcalendar_mini_category)
+        && isset($forum['fid'])
+        && (int)$forum['fid'] === (int)($mybb->settings['rpgcalendar_mini_inplay_fid'] ?? 0)
+    ) {
+        $forum['description'] = (isset($forum['description']) ? $forum['description'] : '')
+            . '<!--RPGCALENDAR_MINI_CATEGORY-->';
+    }
+
     if (isset($forum['description'])
         && strpos($forum['description'], '{$rpgcalendar_current_monthtexts}') !== false
     ) {
@@ -279,7 +296,15 @@ function rpgcalendar_forumbits_monthtexts($forum)
  */
 function rpgcalendar_pre_output_monthtexts($contents)
 {
-    global $rpgcalendar_current_monthtexts;
+    global $rpgcalendar_current_monthtexts, $rpgcalendar_mini_category;
+
+    if (strpos($contents, '<!--RPGCALENDAR_MINI_CATEGORY-->') !== false) {
+        $contents = str_replace(
+            '<!--RPGCALENDAR_MINI_CATEGORY-->',
+            (string)$rpgcalendar_mini_category,
+            $contents
+        );
+    }
 
     if (strpos($contents, '<!--RPGCALENDAR_CURRENT_MONTHTEXTS-->') !== false) {
         $contents = str_replace(
