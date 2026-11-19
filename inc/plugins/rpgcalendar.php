@@ -263,19 +263,6 @@ function rpgcalendar_set_current_monthtexts(): void
  */
 function rpgcalendar_forumbits_monthtexts($forum)
 {
-    global $mybb, $rpgcalendar_mini_category;
-
-    // Mini calendar inside the configured inplay category: append a sentinel to
-    // the category description, i.e. between the category header and its first
-    // sub-forum. The real HTML is swapped in at pre_output_page.
-    if (!empty($rpgcalendar_mini_category)
-        && isset($forum['fid'])
-        && (int)$forum['fid'] === (int)($mybb->settings['rpgcalendar_mini_inplay_fid'] ?? 0)
-    ) {
-        $forum['description'] = (isset($forum['description']) ? $forum['description'] : '')
-            . '<!--RPGCALENDAR_MINI_CATEGORY-->';
-    }
-
     if (isset($forum['description'])
         && strpos($forum['description'], '{$rpgcalendar_current_monthtexts}') !== false
     ) {
@@ -296,14 +283,33 @@ function rpgcalendar_forumbits_monthtexts($forum)
  */
 function rpgcalendar_pre_output_monthtexts($contents)
 {
-    global $rpgcalendar_current_monthtexts, $rpgcalendar_mini_category;
+    global $mybb, $rpgcalendar_current_monthtexts, $rpgcalendar_mini_category;
 
-    if (strpos($contents, '<!--RPGCALENDAR_MINI_CATEGORY-->') !== false) {
-        $contents = str_replace(
-            '<!--RPGCALENDAR_MINI_CATEGORY-->',
-            (string)$rpgcalendar_mini_category,
-            $contents
-        );
+    // Mini calendar inside the configured inplay category, between the category
+    // header and its first sub-forum. Anchored on the category's body
+    // (id="cat_{fid}_e", present in the default and the h4w templates) instead of
+    // the category description, because themes may hide the description.
+    $mini_fid = (int)($mybb->settings['rpgcalendar_mini_inplay_fid'] ?? 0);
+    if ($mini_fid > 0 && !empty($rpgcalendar_mini_category)
+        && preg_match('/<tbody[^>]*id="cat_' . $mini_fid . '_e"[^>]*>/', $contents, $m, PREG_OFFSET_CAPTURE)
+    ) {
+        $open_end  = $m[0][1] + strlen($m[0][0]);
+        $body_end  = strpos($contents, '</tbody>', $open_end);
+        $body      = ($body_end === false) ? '' : substr($contents, $open_end, $body_end - $open_end);
+        $container = strpos($body, '<div class="h4w-subforums-container"');
+
+        if ($body !== '' && $container !== false) {
+            // h4w layout: directly before the sub-forum container
+            $contents = substr_replace($contents, (string)$rpgcalendar_mini_category, $open_end + $container, 0);
+        } elseif ($body !== '') {
+            // default table layout: an own row before the first sub-forum row
+            $contents = substr_replace(
+                $contents,
+                '<tr><td colspan="5">' . $rpgcalendar_mini_category . '</td></tr>',
+                $open_end,
+                0
+            );
+        }
     }
 
     if (strpos($contents, '<!--RPGCALENDAR_CURRENT_MONTHTEXTS-->') !== false) {

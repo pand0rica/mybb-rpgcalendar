@@ -268,7 +268,7 @@ the browser) and links to the full calendar. The big calendar is unchanged and h
 
 **Setup (admin, once):** add the placeholder to your theme templates (no core edit):
 
-- Preferred: set **Inplay category for the mini calendar** in the ACP settings. The calendar then appears inside that category, between its header and its first sub-forum (shown on the forum index only). No template edit needed if the category template prints the category description.
+- Preferred: set **Inplay category for the mini calendar** in the ACP settings. The calendar then appears inside that category, between its header and its first sub-forum (shown on the forum index only). No template edit needed.
 - Fallback without a category: `{$rpgcalendar_mini_inplay}` in the `index` template, above the whole forum list (forum index only)
 - `{$rpgcalendar_mini_header}` in the `header` template or a header slider (shown on every page)
 
@@ -325,7 +325,7 @@ Path: **ACP → Configuration → Settings → RPG Calendar**
 | Enable index mini calendar | Master switch for the mini calendar (see "Mini calendar") |
 | Mini calendar on by default | Whether members without saved settings see it |
 | Default mini calendar position | `inplay` (forum index) or `header` (all pages) for members without saved settings |
-| Inplay category for the mini calendar | Category in which the "above the inplay" mini calendar is shown, **between the category header and its first sub-forum**. The category template must print the category description (the h4w theme does); the calendar is appended to it. Empty = fall back to the `{$rpgcalendar_mini_inplay}` template variable above the whole forum list |
+| Inplay category for the mini calendar | Category in which the "above the inplay" mini calendar is shown, **between the category header and its first sub-forum** (works with the default and the h4w category templates). Empty = fall back to the `{$rpgcalendar_mini_inplay}` template variable above the whole forum list |
 | Allow HTML in event titles | Render HTML in event titles instead of escaping it. Only enable on calendars where you trust everyone who can create events – on public calendars this lets those users inject markup |
 
 ## Integration for plot plugins (Plot-CP)

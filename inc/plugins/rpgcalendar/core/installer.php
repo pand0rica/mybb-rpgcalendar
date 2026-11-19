@@ -457,7 +457,7 @@ header=Header (all pages)", 'inplay',
             ],
             'mini_inplay_fid' => [
                 'Inplay category for the mini calendar',
-                'Category in which the "above the inplay" mini calendar appears: between the category header and its first sub-forum. The category template must print the category description (the h4w theme does); the calendar is appended to it. Empty = shown above the whole forum list via the template variable in the index template instead.',
+                'Category in which the "above the inplay" mini calendar appears: between the category header and its first sub-forum (works with the default and the h4w category templates). Empty = shown above the whole forum list via the template variable in the index template instead.',
                 'forumselectsingle', '',
             ],
             'allowed_groups' => [
