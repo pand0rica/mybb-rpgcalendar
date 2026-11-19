@@ -27,6 +27,7 @@
 <option value="important"{$mini_events_important_selected}>{$lang->rpgcalendar_minisettings_events_important}</option>
 <option value="none"{$mini_events_none_selected}>{$lang->rpgcalendar_minisettings_events_none}</option>
 </select><br />
+<label><input type="checkbox" name="edges_only" value="1"{$mini_edges_checked} /> {$lang->rpgcalendar_minisettings_edges_only}</label><br />
 <label><input type="checkbox" name="show_scenes" value="1"{$mini_scenes_checked} /> {$lang->rpgcalendar_minisettings_show_scenes}</label><br />
 <label><input type="checkbox" name="show_moon" value="1"{$mini_moon_checked} /> {$lang->rpgcalendar_minisettings_show_moon}</label></p>
 <p class="smalltext">{$lang->rpgcalendar_minisettings_scenes_hint}</p>

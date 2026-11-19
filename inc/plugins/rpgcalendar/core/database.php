@@ -589,7 +589,7 @@ class Rpgcalendar_Database
      * Settings of the index mini calendar for one account. Accounts without a
      * saved row get the ACP defaults (mini_default_on / mini_default_position).
      *
-     * @return array ['mini_enabled','mini_position','show_birthdays','show_events','only_important','show_scenes','show_moon','saved']
+     * @return array ['mini_enabled','mini_position','show_birthdays','show_events','only_important','edges_only','show_scenes','show_moon','saved']
      */
     public function getUserSettings(int $uid): array
     {
@@ -602,6 +602,7 @@ class Rpgcalendar_Database
             'show_birthdays' => 1,
             'show_events'    => 1,
             'only_important' => 0,
+            'edges_only'     => 0,
             'show_scenes'    => 1,
             'show_moon'      => 1,
             'saved'          => false,
@@ -614,7 +615,7 @@ class Rpgcalendar_Database
 
         $row = $this->db->fetch_array($this->db->simple_select(
             'rpgcalendar_user_settings',
-            'mini_enabled, mini_position, show_birthdays, show_events, only_important, show_scenes, show_moon',
+            'mini_enabled, mini_position, show_birthdays, show_events, only_important, edges_only, show_scenes, show_moon',
             'uid = ' . $uid
         ));
         if (!$row) {
@@ -627,6 +628,7 @@ class Rpgcalendar_Database
             'show_birthdays' => (int)$row['show_birthdays'] ? 1 : 0,
             'show_events'    => (int)$row['show_events'] ? 1 : 0,
             'only_important' => (int)$row['only_important'] ? 1 : 0,
+            'edges_only'     => (int)$row['edges_only'] ? 1 : 0,
             'show_scenes'    => (int)$row['show_scenes'] ? 1 : 0,
             'show_moon'      => (int)$row['show_moon'] ? 1 : 0,
             'saved'          => true,
@@ -647,6 +649,7 @@ class Rpgcalendar_Database
             'show_birthdays' => !empty($settings['show_birthdays']) ? 1 : 0,
             'show_events'    => !empty($settings['show_events']) ? 1 : 0,
             'only_important' => !empty($settings['only_important']) ? 1 : 0,
+            'edges_only'     => !empty($settings['edges_only']) ? 1 : 0,
             'show_scenes'    => !empty($settings['show_scenes']) ? 1 : 0,
             'show_moon'      => !empty($settings['show_moon']) ? 1 : 0,
         ];
