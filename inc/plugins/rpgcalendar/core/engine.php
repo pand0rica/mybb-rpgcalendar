@@ -442,7 +442,7 @@ class Rpgcalendar_Engine
                     if ($type === 'scene' && empty($opts['show_scenes'])) {
                         continue;
                     }
-                    if ($type === 'event' && empty($opts['show_events'])) {
+                    if ($type === 'event' && empty($opts['show_events']) && empty($opts['only_important'])) {
                         continue;
                     }
                     // "only important events": scenes and birthdays are never filtered
