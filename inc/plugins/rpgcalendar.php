@@ -24,6 +24,8 @@ $plugins->add_hook('admin_tools_action_handler', 'rpgcalendar_admin_action');
 // injection. global_intermediate (not global_start): the template system is not
 // ready at global_start, so $templates->get() would fail there.
 $plugins->add_hook('global_intermediate',   'rpgcalendar_set_current_monthtexts');
+// Index mini calendar: {$rpgcalendar_mini_header} / {$rpgcalendar_mini_inplay}
+$plugins->add_hook('global_intermediate',   'rpgcalendar_set_mini_calendar');
 $plugins->add_hook('build_forumbits_forum', 'rpgcalendar_forumbits_monthtexts');
 $plugins->add_hook('pre_output_page',       'rpgcalendar_pre_output_monthtexts');
 
@@ -35,7 +37,7 @@ function rpgcalendar_info(): array
         'website'       => 'https://github.com/pand0rica/mybb-rpgcalendar',
         'author'        => 'pand0rica',
         'authorsite'    => 'https://github.com/pand0rica',
-        'version'       => '1.3.0',
+        'version'       => '1.4.0',
         'guid'          => '',
         'codename'      => 'rpgcalendar',
         'compatibility' => '18*',
@@ -134,6 +136,53 @@ function rpgcalendar_rewrite_calendar_links(): void
                 $templates->cache[$name]
             );
         }
+    }
+}
+
+/**
+ * Builds the global template variables {$rpgcalendar_mini_header} (every page)
+ * and {$rpgcalendar_mini_inplay} (forum index only) for the index mini calendar.
+ * Only one of them is filled, depending on the account's own setting. Guests,
+ * disabled accounts and groups without calendar access get ''.
+ */
+function rpgcalendar_set_mini_calendar(): void
+{
+    global $mybb, $rpgcalendar_mini_header, $rpgcalendar_mini_inplay;
+
+    $rpgcalendar_mini_header = '';
+    $rpgcalendar_mini_inplay = '';
+
+    if ((int)($mybb->settings['rpgcalendar_enabled'] ?? 0) !== 1
+        || (int)($mybb->settings['rpgcalendar_mini_enabled'] ?? 0) !== 1
+        || (int)$mybb->user['uid'] <= 0
+    ) {
+        return;
+    }
+
+    $allowed = (string)($mybb->settings['rpgcalendar_allowed_groups'] ?? '');
+    if ($allowed !== '' && $allowed !== '-1' && !is_member($allowed)) {
+        return;
+    }
+
+    require_once MYBB_ROOT . 'inc/plugins/rpgcalendar/core/database.php';
+    $database = new Rpgcalendar_Database();
+    $settings = $database->getUserSettings((int)$mybb->user['uid']);
+    if (!$settings['mini_enabled']) {
+        return;
+    }
+
+    // The inplay position only exists on the forum index
+    if ($settings['mini_position'] === 'inplay' && THIS_SCRIPT !== 'index.php') {
+        return;
+    }
+
+    require_once MYBB_ROOT . 'inc/plugins/rpgcalendar/core/mini.php';
+    $html = Rpgcalendar_Mini::render($settings, (int)$mybb->user['uid']);
+
+    if ($settings['mini_position'] === 'header') {
+        $rpgcalendar_mini_header = $html;
+    } else {
+        $rpgcalendar_mini_inplay = $html;
     }
 }
 

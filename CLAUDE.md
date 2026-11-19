@@ -83,6 +83,8 @@ appear on the "My calendars" page (per-user colour + show/hide). rpgcalendar fir
 with the reserved `cal-`). Events reference the same key via `calendar_key`. rpgcalendar's own
 birthdays are the built-in virtual calendar `birthdays`.
 
+Provider events with `'source' => 'scene'` (delivered by the Logbook plugin, calendar key `logbook-scenes`) are the top-priority highlight of the index mini calendar (`Rpgcalendar_Engine::getMiniMonthData()`, priority birthday < event/plot < scene). The mini calendar renders every month of the `current_inplay` setting; per-account options live in `rpgcalendar_user_settings`.
+
 There is also an optional output hook `rpgcalendar_monthview_end`
 (`['year','month','output' => &$html]`) below the event table.
 

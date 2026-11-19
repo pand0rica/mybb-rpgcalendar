@@ -89,6 +89,18 @@ class Rpgcalendar_Installer
             UNIQUE KEY `user_cal` (`uid`, `calendar_key`)
         ) ENGINE=InnoDB{$collation};");
 
+        // Per-account index mini-calendar settings (what to show and where).
+        $db->query("CREATE TABLE IF NOT EXISTS `" . TABLE_PREFIX . "rpgcalendar_user_settings` (
+            `uid`           INT UNSIGNED NOT NULL DEFAULT 0,
+            `mini_enabled`  TINYINT(1) NOT NULL DEFAULT 0,
+            `mini_position` VARCHAR(10) NOT NULL DEFAULT 'inplay',
+            `show_birthdays` TINYINT(1) NOT NULL DEFAULT 1,
+            `show_events`   TINYINT(1) NOT NULL DEFAULT 1,
+            `show_scenes`   TINYINT(1) NOT NULL DEFAULT 1,
+            `show_moon`     TINYINT(1) NOT NULL DEFAULT 1,
+            PRIMARY KEY (`uid`)
+        ) ENGINE=InnoDB{$collation};");
+
         $db->query("CREATE TABLE IF NOT EXISTS `" . TABLE_PREFIX . "rpgcalendar_monthtexts` (
             `mtid`     INT UNSIGNED NOT NULL AUTO_INCREMENT,
             `year`     SMALLINT NOT NULL DEFAULT 0,
@@ -381,6 +393,7 @@ class Rpgcalendar_Installer
         $db->drop_table('rpgcalendar_event_invites');
         $db->drop_table('rpgcalendar_calendars');
         $db->drop_table('rpgcalendar_calendar_prefs');
+        $db->drop_table('rpgcalendar_user_settings');
         $db->drop_table('rpgcalendar_calendar_members');
         $db->drop_table('rpgcalendar_feeds');
         $db->drop_table('rpgcalendar_locations');
@@ -410,6 +423,23 @@ class Rpgcalendar_Installer
                 'Link rewrite templates',
                 'Comma-separated template names in which calendar.php links are rewritten at runtime. The MyBB default is header_menu_calendar; themes with custom headers can add their own template names here (no template edit needed).',
                 'text', 'header_menu_calendar',
+            ],
+            'mini_enabled' => [
+                'Enable index mini calendar',
+                'Master switch for the small calendar on the forum index / in the header. Members choose in their own settings (rpgcalendar.php?action=minisettings) whether and where they see it.',
+                'onoff', '1',
+            ],
+            'mini_default_on' => [
+                'Mini calendar on by default',
+                'Whether members who never saved their own mini-calendar settings see it.',
+                'onoff', '0',
+            ],
+            'mini_default_position' => [
+                'Default mini calendar position',
+                'Default placement for members without own settings: inplay (index, via {$rpgcalendar_mini_inplay}) or header (all pages, via {$rpgcalendar_mini_header}).',
+                "select
+inplay=Above the inplay area (index only)
+header=Header (all pages)", 'inplay',
             ],
             'allowed_groups' => [
                 'Allowed user groups',
@@ -700,36 +730,51 @@ class Rpgcalendar_Installer
         require_once MYBB_ROOT . 'inc/adminfunctions_templates.php';
         require_once MYBB_ADMIN_DIR . 'inc/functions_themes.php';
 
-        $css_path = MYBB_ROOT . 'inc/plugins/rpgcalendar/assets/rpgcalendar.css';
-        if (!file_exists($css_path)) {
-            return;
+        // name => [file, attachedto]. The mini calendar can sit in the header
+        // (every page), so its stylesheet is global ('' = attached everywhere).
+        $sheets = [
+            'rpgcalendar.css'      => ['rpgcalendar.css', 'rpgcalendar.php'],
+            'rpgcalendar_mini.css' => ['rpgcalendar_mini.css', ''],
+        ];
+
+        $themes = $db->simple_select('themes', 'tid');
+        $tids = [];
+        while ($theme = $db->fetch_array($themes)) {
+            $tids[] = (int)$theme['tid'];
         }
 
-        $css = $db->escape_string((string)file_get_contents($css_path));
-        $themes = $db->simple_select('themes', 'tid');
-        while ($theme = $db->fetch_array($themes)) {
-            $tid = (int)$theme['tid'];
-            $existing = $db->fetch_array($db->simple_select(
-                'themestylesheets', 'sid',
-                "name = 'rpgcalendar.css' AND tid = '" . $tid . "'"
-            ));
-            if ($existing) {
-                $db->update_query('themestylesheets', [
-                    'stylesheet'   => $css,
-                    'lastmodified' => TIME_NOW,
-                ], "sid = '" . (int)$existing['sid'] . "'", 1);
-            } else {
-                $sid = $db->insert_query('themestylesheets', [
-                    'name'         => 'rpgcalendar.css',
-                    'tid'          => $tid,
-                    'attachedto'   => 'rpgcalendar.php',
-                    'stylesheet'   => $css,
-                    'lastmodified' => TIME_NOW,
-                    'cachefile'    => 'rpgcalendar.css',
-                ]);
-                $db->update_query('themestylesheets',
-                    ['cachefile' => "css.php?stylesheet={$sid}"], 'sid = ' . (int)$sid, 1);
+        foreach ($sheets as $name => $def) {
+            $css_path = MYBB_ROOT . 'inc/plugins/rpgcalendar/assets/' . $def[0];
+            if (!file_exists($css_path)) {
+                continue;
             }
+            $css = $db->escape_string((string)file_get_contents($css_path));
+            foreach ($tids as $tid) {
+                $existing = $db->fetch_array($db->simple_select(
+                    'themestylesheets', 'sid',
+                    "name = '" . $db->escape_string($name) . "' AND tid = '" . $tid . "'"
+                ));
+                if ($existing) {
+                    $db->update_query('themestylesheets', [
+                        'stylesheet'   => $css,
+                        'lastmodified' => TIME_NOW,
+                    ], "sid = '" . (int)$existing['sid'] . "'", 1);
+                } else {
+                    $sid = $db->insert_query('themestylesheets', [
+                        'name'         => $name,
+                        'tid'          => $tid,
+                        'attachedto'   => $def[1],
+                        'stylesheet'   => $css,
+                        'lastmodified' => TIME_NOW,
+                        'cachefile'    => $name,
+                    ]);
+                    $db->update_query('themestylesheets',
+                        ['cachefile' => "css.php?stylesheet={$sid}"], 'sid = ' . (int)$sid, 1);
+                }
+            }
+        }
+
+        foreach ($tids as $tid) {
             update_theme_stylesheet_list($tid);
         }
     }
@@ -741,7 +786,7 @@ class Rpgcalendar_Installer
         require_once MYBB_ROOT . 'inc/adminfunctions_templates.php';
         require_once MYBB_ADMIN_DIR . 'inc/functions_themes.php';
 
-        $db->delete_query('themestylesheets', "name = 'rpgcalendar.css'");
+        $db->delete_query('themestylesheets', "name IN ('rpgcalendar.css', 'rpgcalendar_mini.css')");
         $themes = $db->simple_select('themes', 'tid');
         while ($theme = $db->fetch_array($themes)) {
             update_theme_stylesheet_list((int)$theme['tid']);

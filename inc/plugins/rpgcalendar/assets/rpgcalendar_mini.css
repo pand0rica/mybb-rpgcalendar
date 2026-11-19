@@ -1,0 +1,88 @@
+/* rpgcalendar index mini calendar. Highlight priority: birthday < event < scene. */
+.rpgcalendar_mini {
+    --rpgcal-mini-birthday: #f59e0b;
+    --rpgcal-mini-event: #8b5cf6;
+    --rpgcal-mini-scene: #2563eb;
+    --rpgcal-mini-moon: #fde68a;
+    position: relative;
+    box-sizing: border-box;
+    max-width: 100%;
+    margin: 0 0 10px;
+    padding: 8px 10px;
+    border: 1px solid rgba(128, 128, 128, 0.35);
+    border-radius: 8px;
+    font-size: 12px;
+}
+.rpgcalendar_mini_head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.rpgcalendar_mini_title { font-weight: bold; flex: 1 1 auto; }
+.rpgcalendar_mini_toggle,
+.rpgcalendar_mini_daybtn {
+    font: inherit;
+    color: inherit;
+    background: none;
+    border: 0;
+    cursor: pointer;
+}
+.rpgcalendar_mini_settings { text-decoration: none; opacity: 0.7; }
+.rpgcalendar_mini_toggle { transition: transform 0.15s; }
+.rpgcalendar_mini--collapsed .rpgcalendar_mini_toggle { transform: rotate(-90deg); }
+.rpgcalendar_mini_body[hidden],
+.rpgcalendar_mini_popover[hidden] { display: none; }
+
+.rpgcalendar_mini_months {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 6px;
+}
+.rpgcalendar_mini_month { flex: 0 1 auto; min-width: 190px; }
+.rpgcalendar_mini_monthname { margin-bottom: 2px; font-weight: bold; text-align: center; }
+.rpgcalendar_mini_table { width: 100%; border-collapse: separate; border-spacing: 2px; table-layout: fixed; }
+.rpgcalendar_mini_table th { font-weight: normal; opacity: 0.65; text-align: center; padding: 1px 0; }
+.rpgcalendar_mini_table td { text-align: center; padding: 0; height: 24px; border-radius: 5px; }
+.rpgcalendar_mini_daybtn { width: 100%; height: 100%; padding: 0; border-radius: 5px; }
+.rpgcalendar_mini_daybtn[data-info=""] { cursor: default; }
+
+.rpgcalendar_mini_cell--birthday { background: var(--rpgcal-mini-birthday); color: #1f1300; }
+.rpgcalendar_mini_cell--event { background: var(--rpgcal-mini-event); color: #fff; }
+.rpgcalendar_mini_cell--scene { background: var(--rpgcal-mini-scene); color: #fff; }
+.rpgcalendar_mini_cell--today { outline: 2px solid currentColor; outline-offset: -2px; }
+/* full moon: soft glow around the number, works on top of any highlight colour */
+.rpgcalendar_mini_cell--fullmoon { box-shadow: 0 0 0 2px var(--rpgcal-mini-moon), 0 0 9px 3px var(--rpgcal-mini-moon); }
+.rpgcalendar_mini_daybtn--open { filter: brightness(1.15); }
+
+.rpgcalendar_mini_legend { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 6px; opacity: 0.85; }
+.rpgcalendar_mini_legend_item { display: inline-flex; align-items: center; gap: 4px; }
+.rpgcalendar_mini_swatch { display: inline-block; width: 11px; height: 11px; border-radius: 3px; }
+.rpgcalendar_mini_swatch--birthday { background: var(--rpgcal-mini-birthday); }
+.rpgcalendar_mini_swatch--event { background: var(--rpgcal-mini-event); }
+.rpgcalendar_mini_swatch--scene { background: var(--rpgcal-mini-scene); }
+.rpgcalendar_mini_swatch--fullmoon { background: var(--rpgcal-mini-moon); box-shadow: 0 0 5px 1px var(--rpgcal-mini-moon); }
+
+.rpgcalendar_mini_popover {
+    position: absolute;
+    z-index: 50;
+    min-width: 200px;
+    max-width: 320px;
+    padding: 8px 10px;
+    text-align: left;
+    background: #fff;
+    color: #1f2937;
+    border: 1px solid rgba(128, 128, 128, 0.5);
+    border-radius: 8px;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
+}
+.rpgcalendar_mini_popover a { color: #1d4ed8; }
+.rpgcalendar_mini_pop_date { font-weight: bold; margin-bottom: 4px; }
+.rpgcalendar_mini_pop_moon { margin-bottom: 4px; }
+.rpgcalendar_mini_pop_list { list-style: none; margin: 0; padding: 0; }
+.rpgcalendar_mini_pop_item { padding: 2px 0 2px 8px; border-left: 3px solid #94a3b8; margin-bottom: 3px; }
+.rpgcalendar_mini_pop_item--birthday { border-left-color: var(--rpgcal-mini-birthday); }
+.rpgcalendar_mini_pop_item--event { border-left-color: var(--rpgcal-mini-event); }
+.rpgcalendar_mini_pop_item--scene { border-left-color: var(--rpgcal-mini-scene); }
+.rpgcalendar_mini_pop_type { display: block; font-size: 10px; text-transform: uppercase; opacity: 0.6; }
+.rpgcalendar_mini_pop_more { display: inline-block; margin-top: 4px; }

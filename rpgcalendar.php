@@ -22,7 +22,7 @@ $templatelist = 'rpgcalendar,rpgcalendar_nav,rpgcalendar_nav_link,rpgcalendar_we
     . 'rpgcalendar_calendar_share,rpgcalendar_calendar_leave,rpgcalendar_calendar_invites,rpgcalendar_calendar_invite_row,'
     . 'rpgcalendar_calendar_joinable,rpgcalendar_calendar_joinable_row,'
     . 'rpgcalendar_share,rpgcalendar_share_member,rpgcalendar_share_empty,rpgcalendar_autocomplete,'
-    . 'rpgcalendar_hint';
+    . 'rpgcalendar_hint,rpgcalendar_minisettings';
 
 require_once './global.php';
 
@@ -1192,6 +1192,52 @@ if ($rpgcalendar_action === 'share') {
 // ---------------------------------------------------------------------
 // "My calendars": per-user colour + visibility, personal calendar CRUD
 // ---------------------------------------------------------------------
+// ---------------------------------------------------------------------
+// Index mini calendar: per-account settings (what to show, where)
+// ---------------------------------------------------------------------
+if ($rpgcalendar_action === 'minisettings') {
+    if ((int)$mybb->user['uid'] <= 0) {
+        error_no_permission();
+    }
+    $viewer_uid    = (int)$mybb->user['uid'];
+    $mini_settings = $rpgcalendar_database->getUserSettings($viewer_uid);
+    $post_code     = $mybb->post_code;
+
+    $mini_enabled_checked    = $mini_settings['mini_enabled'] ? ' checked="checked"' : '';
+    $mini_pos_inplay_selected = ($mini_settings['mini_position'] === 'inplay') ? ' selected="selected"' : '';
+    $mini_pos_header_selected = ($mini_settings['mini_position'] === 'header') ? ' selected="selected"' : '';
+    $mini_birthdays_checked  = $mini_settings['show_birthdays'] ? ' checked="checked"' : '';
+    $mini_events_checked     = $mini_settings['show_events'] ? ' checked="checked"' : '';
+    $mini_scenes_checked     = $mini_settings['show_scenes'] ? ' checked="checked"' : '';
+    $mini_moon_checked       = $mini_settings['show_moon'] ? ' checked="checked"' : '';
+
+    $rpgcalendar_pagetitle = $lang->rpgcalendar_title . ' - ' . $lang->rpgcalendar_minisettings_title;
+    $minisettings_backurl  = 'rpgcalendar.php?action=calendars';
+
+    add_breadcrumb($lang->rpgcalendar_minisettings_title);
+    eval('$page = "' . $templates->get('rpgcalendar_minisettings') . '";');
+    output_page($page);
+    exit;
+}
+
+if ($rpgcalendar_action === 'do_minisettings') {
+    if ((int)$mybb->user['uid'] <= 0) {
+        error_no_permission();
+    }
+    verify_post_check($mybb->get_input('my_post_key'));
+
+    $rpgcalendar_database->saveUserSettings((int)$mybb->user['uid'], [
+        'mini_enabled'   => $mybb->get_input('mini_enabled', MyBB::INPUT_INT) === 1,
+        'mini_position'  => ($mybb->get_input('mini_position') === 'header') ? 'header' : 'inplay',
+        'show_birthdays' => $mybb->get_input('show_birthdays', MyBB::INPUT_INT) === 1,
+        'show_events'    => $mybb->get_input('show_events', MyBB::INPUT_INT) === 1,
+        'show_scenes'    => $mybb->get_input('show_scenes', MyBB::INPUT_INT) === 1,
+        'show_moon'      => $mybb->get_input('show_moon', MyBB::INPUT_INT) === 1,
+    ]);
+
+    redirect('rpgcalendar.php?action=minisettings', $lang->rpgcalendar_minisettings_saved);
+}
+
 if ($rpgcalendar_action === 'calendars') {
     if ((int)$mybb->user['uid'] <= 0) {
         error_no_permission();
