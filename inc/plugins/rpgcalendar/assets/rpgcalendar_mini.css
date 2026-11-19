@@ -44,7 +44,7 @@
 .rpgcalendar_mini_body[hidden],
 .rpgcalendar_mini_popover[hidden] { display: none; }
 
-/* months sit side by side (two per row); on narrow screens they stack */
+/* months share the row equally (side by side); on narrow screens they stack */
 .rpgcalendar_mini_months {
     display: flex;
     flex-wrap: wrap;
@@ -52,15 +52,16 @@
     margin-top: 3px;
 }
 .rpgcalendar_mini_month {
-    flex: 1 1 calc(50% - 7px);
+    flex: 1 1 0;
     min-width: 150px;
-    max-width: 300px;
 }
+/* a single month would stretch across the whole row: keep it compact */
+.rpgcalendar_mini_month:only-child { flex: 0 1 340px; }
 .rpgcalendar_mini_monthname { margin-bottom: 1px; font-weight: bold; text-align: center; }
 .rpgcalendar_mini_table { width: 100%; border-collapse: separate; border-spacing: 1px; table-layout: fixed; }
 .rpgcalendar_mini_table th { font-weight: normal; font-size: 10px; opacity: 0.65; text-align: center; padding: 0; }
-.rpgcalendar_mini_table td { text-align: center; padding: 0; height: 19px; border-radius: 4px; }
-.rpgcalendar_mini_daybtn { display: block; width: 100%; height: 100%; padding: 0; border-radius: 4px; line-height: 19px; }
+.rpgcalendar_mini_table td { text-align: center; padding: 0; height: 21px; border-radius: 4px; }
+.rpgcalendar_mini_daybtn { display: block; width: 100%; height: 100%; padding: 0; border-radius: 4px; line-height: 21px; }
 .rpgcalendar_mini_daybtn[data-info=""] { cursor: default; }
 
 .rpgcalendar_mini_cell--birthday { background: var(--rpgcal-mini-birthday); color: var(--rpgcal-mini-birthday-text); }
@@ -104,5 +105,6 @@
 .rpgcalendar_mini_pop_more { display: inline-block; margin-top: 4px; }
 
 @media (max-width: 480px) {
-    .rpgcalendar_mini_month { flex-basis: 100%; max-width: none; }
+    .rpgcalendar_mini_month,
+    .rpgcalendar_mini_month:only-child { flex: 1 1 100%; }
 }

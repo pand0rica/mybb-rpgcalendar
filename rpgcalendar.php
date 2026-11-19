@@ -1207,8 +1207,11 @@ if ($rpgcalendar_action === 'minisettings') {
     $mini_pos_inplay_selected = ($mini_settings['mini_position'] === 'inplay') ? ' selected="selected"' : '';
     $mini_pos_header_selected = ($mini_settings['mini_position'] === 'header') ? ' selected="selected"' : '';
     $mini_birthdays_checked  = $mini_settings['show_birthdays'] ? ' checked="checked"' : '';
-    $mini_events_checked     = $mini_settings['show_events'] ? ' checked="checked"' : '';
-    $mini_important_checked  = $mini_settings['only_important'] ? ' checked="checked"' : '';
+    // events/plots: one choice (all / only important / none)
+    $mini_events_mode = $mini_settings['only_important'] ? 'important' : ($mini_settings['show_events'] ? 'all' : 'none');
+    $mini_events_all_selected       = ($mini_events_mode === 'all') ? ' selected="selected"' : '';
+    $mini_events_important_selected = ($mini_events_mode === 'important') ? ' selected="selected"' : '';
+    $mini_events_none_selected      = ($mini_events_mode === 'none') ? ' selected="selected"' : '';
     $mini_scenes_checked     = $mini_settings['show_scenes'] ? ' checked="checked"' : '';
     $mini_moon_checked       = $mini_settings['show_moon'] ? ' checked="checked"' : '';
 
@@ -1227,12 +1230,17 @@ if ($rpgcalendar_action === 'do_minisettings') {
     }
     verify_post_check($mybb->get_input('my_post_key'));
 
+    $events_mode = $mybb->get_input('events_mode');
+    if (!in_array($events_mode, ['all', 'important', 'none'], true)) {
+        $events_mode = 'all';
+    }
+
     $rpgcalendar_database->saveUserSettings((int)$mybb->user['uid'], [
         'mini_enabled'   => $mybb->get_input('mini_enabled', MyBB::INPUT_INT) === 1,
         'mini_position'  => ($mybb->get_input('mini_position') === 'header') ? 'header' : 'inplay',
         'show_birthdays' => $mybb->get_input('show_birthdays', MyBB::INPUT_INT) === 1,
-        'show_events'    => $mybb->get_input('show_events', MyBB::INPUT_INT) === 1,
-        'only_important' => $mybb->get_input('only_important', MyBB::INPUT_INT) === 1,
+        'show_events'    => in_array($events_mode, ['all', 'important'], true),
+        'only_important' => $events_mode === 'important',
         'show_scenes'    => $mybb->get_input('show_scenes', MyBB::INPUT_INT) === 1,
         'show_moon'      => $mybb->get_input('show_moon', MyBB::INPUT_INT) === 1,
     ]);
