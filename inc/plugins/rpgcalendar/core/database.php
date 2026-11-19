@@ -581,6 +581,84 @@ class Rpgcalendar_Database
     // Per-user calendar preferences (colour + visibility)
     // -------------------------------------------------------------------
 
+    // -------------------------------------------------------------------
+    // Per-account index mini-calendar settings
+    // -------------------------------------------------------------------
+
+    /**
+     * Settings of the index mini calendar for one account. Accounts without a
+     * saved row get the ACP defaults (mini_default_on / mini_default_position).
+     *
+     * @return array ['mini_enabled','mini_position','show_birthdays','show_events','show_scenes','show_moon','saved']
+     */
+    public function getUserSettings(int $uid): array
+    {
+        global $mybb;
+
+        $position = (string)($mybb->settings['rpgcalendar_mini_default_position'] ?? 'inplay');
+        $defaults = [
+            'mini_enabled'   => (int)($mybb->settings['rpgcalendar_mini_default_on'] ?? 0) === 1 ? 1 : 0,
+            'mini_position'  => ($position === 'header') ? 'header' : 'inplay',
+            'show_birthdays' => 1,
+            'show_events'    => 1,
+            'show_scenes'    => 1,
+            'show_moon'      => 1,
+            'saved'          => false,
+        ];
+
+        $uid = (int)$uid;
+        if ($uid <= 0) {
+            return $defaults;
+        }
+
+        $row = $this->db->fetch_array($this->db->simple_select(
+            'rpgcalendar_user_settings',
+            'mini_enabled, mini_position, show_birthdays, show_events, show_scenes, show_moon',
+            'uid = ' . $uid
+        ));
+        if (!$row) {
+            return $defaults;
+        }
+
+        return [
+            'mini_enabled'   => (int)$row['mini_enabled'] ? 1 : 0,
+            'mini_position'  => ((string)$row['mini_position'] === 'header') ? 'header' : 'inplay',
+            'show_birthdays' => (int)$row['show_birthdays'] ? 1 : 0,
+            'show_events'    => (int)$row['show_events'] ? 1 : 0,
+            'show_scenes'    => (int)$row['show_scenes'] ? 1 : 0,
+            'show_moon'      => (int)$row['show_moon'] ? 1 : 0,
+            'saved'          => true,
+        ];
+    }
+
+    /** Upserts the (already whitelisted) mini-calendar settings of an account. */
+    public function saveUserSettings(int $uid, array $settings): void
+    {
+        $uid = (int)$uid;
+        if ($uid <= 0) {
+            return;
+        }
+
+        $row = [
+            'mini_enabled'   => !empty($settings['mini_enabled']) ? 1 : 0,
+            'mini_position'  => (($settings['mini_position'] ?? '') === 'header') ? 'header' : 'inplay',
+            'show_birthdays' => !empty($settings['show_birthdays']) ? 1 : 0,
+            'show_events'    => !empty($settings['show_events']) ? 1 : 0,
+            'show_scenes'    => !empty($settings['show_scenes']) ? 1 : 0,
+            'show_moon'      => !empty($settings['show_moon']) ? 1 : 0,
+        ];
+
+        $exists = $this->db->fetch_array($this->db->simple_select(
+            'rpgcalendar_user_settings', 'uid', 'uid = ' . $uid
+        ));
+        if ($exists) {
+            $this->db->update_query('rpgcalendar_user_settings', $row, 'uid = ' . $uid);
+        } else {
+            $row['uid'] = $uid;
+            $this->db->insert_query('rpgcalendar_user_settings', $row);
+        }
+    }
+
     /** @return array map calendar_key => ['color' => string, 'visible' => int] */
     public function getUserPrefs(int $uid): array
     {

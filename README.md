@@ -258,6 +258,26 @@ Every member has a personal calendars page where they can:
   **Birthdays** calendar.
 - **Join** any global calendar an admin marked as *joinable*.
 
+### Mini calendar (index / header)
+
+A compact Mon–Sun calendar showing **all current in-play months** (every token of the
+*Current in-play months* setting, otherwise the default month). Days are highlighted by
+priority **birthday < event/plot < scene**; the full moon gets a glow; a click on a day opens a
+popover listing everything on that day (with links). The widget can be collapsed (remembered in
+the browser) and links to the full calendar. The big calendar is unchanged and has no popovers.
+
+**Setup (admin, once):** add the placeholder to your theme templates (no core edit):
+
+- `{$rpgcalendar_mini_inplay}` in the `index` template, above the in-play area (shown on the forum index only)
+- `{$rpgcalendar_mini_header}` in the `header` template or a header slider (shown on every page)
+
+**Members:** *Calendar → My calendars → Mini calendar settings* (`rpgcalendar.php?action=minisettings`)
+lets every account choose whether the mini calendar is shown, where (above the inplay or in the
+header) and what it contains: birthdays, events/plots, scenes, full-moon glow. Scenes come from
+the optional Logbook plugin: a character account sees its own scenes, a main account the scenes of
+all linked characters.
+![Step: Mini calendar settings](docs/screenshots/mini-calendar-settings.png)
+
 ### Sharing a calendar
 
 From **My calendars → Share**, you can share one of your calendars with other members:
@@ -300,6 +320,9 @@ Path: **ACP → Configuration → Settings → RPG Calendar**
 | Show missing-data hint | Show the "please add data" hint for fictional locations without data |
 | Team groups | User groups whose members may create forum-wide events from the day view. Everyone else can only create personal events and invite individual members. Empty = only admins publish forum-wide events |
 | Current in-play months | Comma-separated `year-month` tokens (e.g. `1487-3, 1487-4`) whose month texts are collected into the global template variable `{$rpgcalendar_current_monthtexts}` (usable in templates and forum/category descriptions). Empty disables the variable (no query overhead) |
+| Enable index mini calendar | Master switch for the mini calendar (see "Mini calendar") |
+| Mini calendar on by default | Whether members without saved settings see it |
+| Default mini calendar position | `inplay` (forum index) or `header` (all pages) for members without saved settings |
 | Allow HTML in event titles | Render HTML in event titles instead of escaping it. Only enable on calendars where you trust everyone who can create events – on public calendars this lets those users inject markup |
 
 ## Integration for plot plugins (Plot-CP)

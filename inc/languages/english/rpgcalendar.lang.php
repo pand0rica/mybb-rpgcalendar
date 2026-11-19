@@ -219,3 +219,25 @@ $l['rpgcalendar_wcond_95'] = "Thunderstorm";
 $l['rpgcalendar_wcond_96'] = "Thunderstorm with slight hail";
 $l['rpgcalendar_wcond_99'] = "Thunderstorm with heavy hail";
 $l['rpgcalendar_wcond_windy'] = "Windy";
+
+// Index mini calendar
+$l['rpgcalendar_mini_title']                  = "In-game calendar";
+$l['rpgcalendar_mini_toggle']                 = "Collapse / expand";
+$l['rpgcalendar_mini_type_birthday']          = "Birthday";
+$l['rpgcalendar_mini_type_event']             = "Event / plot";
+$l['rpgcalendar_mini_type_scene']             = "Scene";
+$l['rpgcalendar_mini_fullmoon']               = "Full moon";
+$l['rpgcalendar_minisettings_title']          = "Mini calendar";
+$l['rpgcalendar_minisettings_link']           = "Mini calendar settings";
+$l['rpgcalendar_minisettings_hint']           = "The mini calendar shows all current in-game months in a compact view. These settings apply to this account only.";
+$l['rpgcalendar_minisettings_enable']         = "Show the mini calendar";
+$l['rpgcalendar_minisettings_position']       = "Position";
+$l['rpgcalendar_minisettings_pos_inplay']     = "Above the inplay area (index)";
+$l['rpgcalendar_minisettings_pos_header']     = "In the header (all pages)";
+$l['rpgcalendar_minisettings_show']           = "Show:";
+$l['rpgcalendar_minisettings_show_birthdays'] = "Birthdays";
+$l['rpgcalendar_minisettings_show_events']    = "Events and plots";
+$l['rpgcalendar_minisettings_show_scenes']    = "Scenes (Logbook)";
+$l['rpgcalendar_minisettings_show_moon']      = "Highlight the full moon";
+$l['rpgcalendar_minisettings_scenes_hint']    = "Scenes: a character account sees its own scenes, a main account additionally sees the scenes of all linked characters.";
+$l['rpgcalendar_minisettings_saved']          = "Mini calendar settings saved.";

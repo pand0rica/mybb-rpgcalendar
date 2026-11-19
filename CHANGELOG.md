@@ -5,6 +5,12 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Added
+- **Index mini calendar.** Compact Mon–Sun calendar for the forum index or header showing all current in-play months (`current_inplay`), with priority highlighting (birthday < event/plot < scene), a full-moon glow, a day popover and a collapse toggle. Template variables `{$rpgcalendar_mini_inplay}` / `{$rpgcalendar_mini_header}`.
+- **Per-account mini calendar settings** (`rpgcalendar.php?action=minisettings`, new table `rpgcalendar_user_settings`): on/off, position, and what to show (birthdays, events/plots, scenes, full moon). New ACP settings: master switch, default on/off, default position.
+- **Scenes via provider hook.** Provider events with `source = 'scene'` (delivered by the Logbook plugin) get their own highlight in the mini calendar.
+- New global stylesheet `rpgcalendar_mini.css` and script `rpgcalendar-mini.js`.
+
 ### Changed
 - Stylesheet uses plain colour/size values instead of the `--h4w-*` custom properties of one specific forum theme. (Forum-specific theming lives on the separate `h4w` branch.)
 

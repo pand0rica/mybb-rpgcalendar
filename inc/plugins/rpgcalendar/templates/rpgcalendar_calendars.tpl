@@ -13,6 +13,7 @@
 {$calendar_rows}
 </div>
 </div>
+<div class="rpgcalendar_eventview_back"><a href="rpgcalendar.php?action=minisettings">{$lang->rpgcalendar_minisettings_link} &raquo;</a></div>
 {$calendar_addform}
 {$calendar_invites_block}
 {$calendar_joinable_block}

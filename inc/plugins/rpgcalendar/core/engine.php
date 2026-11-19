@@ -373,6 +373,115 @@ class Rpgcalendar_Engine
         ];
     }
 
+    /**
+     * All current in-game months for the index mini calendar: every token of the
+     * 'current_inplay' setting (there can be several), else the configured
+     * default year/month, else the real current month.
+     *
+     * @param string $raw current_inplay setting value
+     * @return array[] list of ['year' => int, 'month' => int]
+     */
+    public static function currentIngameMonths(string $raw, int $default_year = 0, int $default_month = 0): array
+    {
+        $months = Rpgcalendar_Database::currentInplayMonths($raw);
+        if ($months) {
+            return $months;
+        }
+        if ($default_year !== 0 && $default_month >= 1 && $default_month <= 12) {
+            return [['year' => $default_year, 'month' => $default_month]];
+        }
+
+        return [['year' => (int)my_date('Y'), 'month' => (int)my_date('n')]];
+    }
+
+    /**
+     * Reduced month data for the index mini calendar. Reuses getMonthData() (so
+     * every source and the provider hooks behave exactly like the big calendar)
+     * and boils each day down to one highlight kind plus a detail list.
+     *
+     * Highlight priority (higher wins): birthday < event/plot < scene.
+     * Weather and holidays are not part of the mini calendar; the full moon is
+     * reported separately so it can be drawn as a glow.
+     *
+     * @param array $opts show_birthdays / show_events / show_scenes / show_moon (bool-ish)
+     * @return array ['year','month','weeks' => [[cell|null x7]], 'today_day']
+     *               cell = ['day','kind' => ''|birthday|event|scene,'moon' => ''|full,'items' => [['type','title','url']]]
+     */
+    public function getMiniMonthData(int $year, int $month, int $startofweek, int $viewer_uid, array $opts): array
+    {
+        static $rank = ['' => 0, 'birthday' => 1, 'event' => 2, 'scene' => 3];
+
+        $data  = $this->getMonthData($year, $month, $startofweek, $viewer_uid);
+        $weeks = [];
+
+        foreach ($data['grid'] as $week) {
+            $row = [];
+            foreach ($week as $cell) {
+                if ($cell === null) {
+                    $row[] = null;
+                    continue;
+                }
+
+                $kind  = '';
+                $moon  = '';
+                $items = [];
+
+                foreach ($cell['events'] as $e) {
+                    $source = (string)($e['source'] ?? '');
+                    if ($source === 'weather' || $source === 'holiday') {
+                        continue;
+                    }
+                    if ($source === 'moon') {
+                        if (!empty($opts['show_moon']) && (string)($e['condition'] ?? '') === 'full') {
+                            $moon = 'full';
+                        }
+                        continue;
+                    }
+
+                    $type = ($source === 'scene') ? 'scene' : 'event';
+                    if ($type === 'scene' && empty($opts['show_scenes'])) {
+                        continue;
+                    }
+                    if ($type === 'event' && empty($opts['show_events'])) {
+                        continue;
+                    }
+
+                    $items[] = [
+                        'type'  => $type,
+                        'title' => (string)($e['title'] ?? ''),
+                        'url'   => (string)($e['url'] ?? ''),
+                    ];
+                    if ($rank[$type] > $rank[$kind]) {
+                        $kind = $type;
+                    }
+                }
+
+                if (!empty($opts['show_birthdays'])) {
+                    foreach ($cell['birthdays'] as $b) {
+                        $items[] = [
+                            'type'  => 'birthday',
+                            'title' => (string)($b['username'] ?? ''),
+                            'url'   => 'member.php?action=profile&uid=' . (int)($b['uid'] ?? 0),
+                        ];
+                        if ($rank['birthday'] > $rank[$kind]) {
+                            $kind = 'birthday';
+                        }
+                    }
+                }
+
+                $row[] = ['day' => (int)$cell['day'], 'kind' => $kind, 'moon' => $moon, 'items' => $items];
+            }
+            $weeks[] = $row;
+        }
+
+        return [
+            'year'      => $year,
+            'month'     => $month,
+            'weeks'     => $weeks,
+            'today_day' => (int)$data['today_day'],
+        ];
+    }
+
     /** Stable sort of a day's events by their 'sort' weight (default 2). */
     private static function sortDayEvents(array $events): array
     {
