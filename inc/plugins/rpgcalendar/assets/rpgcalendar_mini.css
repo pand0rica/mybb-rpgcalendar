@@ -144,3 +144,6 @@
 .rpgcalendar_mini_popover { color: inherit; }
 .rpgcalendar_mini_swatch--event,
 .rpgcalendar_mini_swatch--birthday { box-shadow: inset 0 0 0 1px var(--rpgcal-mini-border); }
+
+/* h4w: UserCP menu icon (the theme draws the others as FontAwesome glyphs via :before) */
+.usercp_nav_rpgcalendar:before { content: "133"; }

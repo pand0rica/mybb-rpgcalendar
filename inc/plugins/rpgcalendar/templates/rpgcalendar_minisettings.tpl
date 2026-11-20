@@ -5,9 +5,19 @@
 </head>
 <body>
 {$header}
+<div class="sidemenu-wrapper">
+<div class="sidemenu">
+<div class="sidemenu-inner">
+{$usercpnav}
+</div>
+<div class="sidemenu-handle">
+<span class="sidemenu-arrow">&rsaquo;</span>
+</div>
+</div>
+<div class="sidemenu-overlay"></div>
+<div class="sidemenu-content">
 <table width="100%" border="0" align="center">
 <tr>
-{$usercpnav}
 <td valign="top">
 <div class="rpgcalendar">
 <div class="rpgcalendar_eventview_back"><a href="{$minisettings_backurl}">&laquo; {$lang->rpgcalendar_calendars_back}</a></div>
@@ -85,6 +95,8 @@
 </td>
 </tr>
 </table>
+</div>
+</div>
 {$footer}
 </body>
 </html>
