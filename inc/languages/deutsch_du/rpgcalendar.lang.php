@@ -228,6 +228,7 @@ $l['rpgcalendar_mini_type_event']             = "Ereignis / Plot";
 $l['rpgcalendar_mini_type_scene']             = "Szene";
 $l['rpgcalendar_mini_fullmoon']               = "Vollmond";
 $l['rpgcalendar_minisettings_title']          = "Mini-Kalender";
+$l['rpgcalendar_usercp_nav']                  = "Kalender-Einstellungen";
 $l['rpgcalendar_minisettings_link']           = "Mini-Kalender-Einstellungen";
 $l['rpgcalendar_minisettings_hint']           = "Der Mini-Kalender zeigt alle aktuellen Ingame-Monate kompakt an. Diese Einstellungen gelten nur für diesen Account.";
 $l['rpgcalendar_minisettings_enable']         = "Mini-Kalender anzeigen";

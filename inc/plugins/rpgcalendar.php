@@ -26,6 +26,7 @@ $plugins->add_hook('admin_tools_action_handler', 'rpgcalendar_admin_action');
 $plugins->add_hook('global_intermediate',   'rpgcalendar_set_current_monthtexts');
 // Index mini calendar: {$rpgcalendar_mini_header} / {$rpgcalendar_mini_inplay}
 $plugins->add_hook('global_intermediate',   'rpgcalendar_set_mini_calendar');
+$plugins->add_hook('usercp_menu',           'rpgcalendar_usercp_menu', 25);
 $plugins->add_hook('build_forumbits_forum', 'rpgcalendar_forumbits_monthtexts');
 $plugins->add_hook('pre_output_page',       'rpgcalendar_pre_output_monthtexts');
 
@@ -136,6 +137,37 @@ function rpgcalendar_rewrite_calendar_links(): void
                 $templates->cache[$name]
             );
         }
+    }
+}
+
+/**
+ * UserCP navigation: adds a "Calendar settings" link to the Miscellaneous block.
+ * Runs before usercp_menu_misc (priority 30) evaluates its template, so the row is
+ * injected into the cached template at runtime (no template-set edits needed).
+ */
+function rpgcalendar_usercp_menu(): void
+{
+    global $mybb, $lang, $templates;
+
+    if ((int)($mybb->settings['rpgcalendar_enabled'] ?? 0) !== 1 || (int)$mybb->user['uid'] <= 0) {
+        return;
+    }
+    $allowed = (string)($mybb->settings['rpgcalendar_allowed_groups'] ?? '');
+    if ($allowed !== '' && $allowed !== '-1' && !is_member($allowed)) {
+        return;
+    }
+
+    $lang->load('rpgcalendar');
+    $templates->get('usercp_nav_misc'); // make sure it is in the cache
+    if (!isset($templates->cache['usercp_nav_misc']) || strpos($templates->cache['usercp_nav_misc'], 'usercp_nav_rpgcalendar') !== false) {
+        return;
+    }
+
+    $row = '<tr><td class="trow1 smalltext"><a href="rpgcalendar.php?action=minisettings" class="usercp_nav_item usercp_nav_rpgcalendar">'
+        . htmlspecialchars_uni($lang->rpgcalendar_usercp_nav) . '</a></td></tr>';
+    $pos = strrpos($templates->cache['usercp_nav_misc'], '</tbody>');
+    if ($pos !== false) {
+        $templates->cache['usercp_nav_misc'] = substr_replace($templates->cache['usercp_nav_misc'], $row, $pos, 0);
     }
 }
 
