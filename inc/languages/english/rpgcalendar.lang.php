@@ -229,6 +229,7 @@ $l['rpgcalendar_mini_type_scene']             = "Scene";
 $l['rpgcalendar_mini_fullmoon']               = "Full moon";
 $l['rpgcalendar_minisettings_title']          = "Mini calendar";
 $l['rpgcalendar_usercp_nav']                  = "Calendar settings";
+$l['rpgcalendar_minisettings_general']        = "General";
 $l['rpgcalendar_minisettings_link']           = "Mini calendar settings";
 $l['rpgcalendar_minisettings_hint']           = "The mini calendar shows all current in-game months in a compact view. These settings apply to this account only.";
 $l['rpgcalendar_minisettings_enable']         = "Show the mini calendar";

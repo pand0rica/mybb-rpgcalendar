@@ -1219,6 +1219,34 @@ if ($rpgcalendar_action === 'minisettings') {
     $rpgcalendar_pagetitle = $lang->rpgcalendar_title . ' - ' . $lang->rpgcalendar_minisettings_title;
     $minisettings_backurl  = 'rpgcalendar.php?action=calendars';
 
+    // UserCP navigation next to the form (same {$usercpnav} the UserCP pages use)
+    require_once MYBB_ROOT . 'inc/functions_user.php';
+    $lang->load('usercp');
+    $lang->load('usercpnav');
+    usercp_menu();
+
+    // The UserCP stylesheets (menu icons, side menu) are attached to usercp.php only,
+    // so add them to this page the same way global.php does.
+    global $headerinclude, $theme;
+    if (!empty($theme['stylesheets']['usercp.php']['global']) && is_array($theme['stylesheets']['usercp.php']['global'])) {
+        foreach ($theme['stylesheets']['usercp.php']['global'] as $ucp_sheet) {
+            if (strpos($headerinclude, $ucp_sheet) !== false) {
+                continue;
+            }
+            if (strpos($ucp_sheet, 'css.php') !== false) {
+                $ucp_url = $mybb->settings['bburl'] . '/' . $ucp_sheet;
+            } else {
+                $ucp_url = $mybb->get_asset_url($ucp_sheet);
+                if (file_exists(MYBB_ROOT . $ucp_sheet)) {
+                    $ucp_url .= '?t=' . filemtime(MYBB_ROOT . $ucp_sheet);
+                }
+            }
+            $headerinclude .= '<link type="text/css" rel="stylesheet" href="' . htmlspecialchars_uni($ucp_url) . '" />' . "
+";
+        }
+    }
+
+    add_breadcrumb($lang->nav_usercp, 'usercp.php');
     add_breadcrumb($lang->rpgcalendar_minisettings_title);
     eval('$page = "' . $templates->get('rpgcalendar_minisettings') . '";');
     output_page($page);
