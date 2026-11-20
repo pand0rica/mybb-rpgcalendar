@@ -359,3 +359,6 @@
 .rpgcalendar_calrow_delete {
     display: inline;
 }
+
+/* settings page: keep the checkbox centred on its label (the h4w theme shifts checkboxes down by 4px via top) */
+.rpgcalendar fieldset input.checkbox { margin: 0; vertical-align: middle; top: 0; }
