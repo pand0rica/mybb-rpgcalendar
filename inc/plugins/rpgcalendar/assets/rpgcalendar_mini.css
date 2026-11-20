@@ -38,8 +38,19 @@
     border: 0;
     cursor: pointer;
 }
-.rpgcalendar_mini_toggle { padding: 0 2px; transition: transform 0.15s; }
-.rpgcalendar_mini_settings { text-decoration: none; opacity: 0.7; }
+.rpgcalendar_mini_toggle,
+.rpgcalendar_mini_settings {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 28px;
+    height: 28px;
+    font-size: 20px;
+    line-height: 1;
+}
+.rpgcalendar_mini_toggle { padding: 0 4px; transition: transform 0.15s; }
+.rpgcalendar_mini_settings { text-decoration: none; opacity: 0.8; }
+.rpgcalendar_mini_settings:hover { opacity: 1; }
 .rpgcalendar_mini--collapsed .rpgcalendar_mini_toggle { transform: rotate(-90deg); }
 .rpgcalendar_mini_body[hidden],
 .rpgcalendar_mini_popover[hidden] { display: none; }
