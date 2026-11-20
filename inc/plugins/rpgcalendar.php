@@ -283,7 +283,7 @@ function rpgcalendar_forumbits_monthtexts($forum)
  */
 function rpgcalendar_pre_output_monthtexts($contents)
 {
-    global $mybb, $rpgcalendar_current_monthtexts, $rpgcalendar_mini_category;
+    global $mybb, $rpgcalendar_current_monthtexts, $rpgcalendar_mini_category, $rpgcalendar_mini_header;
 
     // Mini calendar inside the configured inplay category, between the category
     // header and its first sub-forum. Anchored on the category's body
@@ -309,6 +309,22 @@ function rpgcalendar_pre_output_monthtexts($contents)
                 $open_end,
                 0
             );
+        }
+    }
+
+    // Header position without a {$rpgcalendar_mini_header} placeholder in the theme:
+    // fall back to the start of the page content (after the header block, else
+    // right after the main container opens).
+    if (!empty($rpgcalendar_mini_header) && strpos($contents, 'id="rpgcalendar_mini"') === false) {
+        if (($pos = strpos($contents, '<!-- end: header -->')) !== false) {
+            $at = $pos + strlen('<!-- end: header -->');
+        } elseif (preg_match('/<div[^>]*id="container"[^>]*>/', $contents, $hm, PREG_OFFSET_CAPTURE)) {
+            $at = $hm[0][1] + strlen($hm[0][0]);
+        } else {
+            $at = -1;
+        }
+        if ($at >= 0) {
+            $contents = substr_replace($contents, (string)$rpgcalendar_mini_header, $at, 0);
         }
     }
 
